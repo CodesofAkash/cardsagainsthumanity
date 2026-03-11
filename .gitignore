@@ -1,0 +1,42 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files
+.env
+.env.local
+.env*.local
+*.pem
+
+# Next.js
+.next/
+out/
+
+# Build outputs
+build/
+dist/
+.cache/
+.medusa/
+
+# Media / uploads
+/cms/media/
+/medusa/uploads/
+
+# Misc
+.DS_Store
+*.tsbuildinfo
+
+# Vercel
+.vercel
+
+# Testing
+coverage/
+/cms/test-results/
+/cms/playwright-report/
+/cms/blob-report/
+/cms/playwright/.cache/
+
+# Payload
+/cms/.payload/
