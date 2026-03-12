@@ -71,6 +71,10 @@ export interface Config {
     media: Media;
     products: Product;
     pages: Page;
+    faqs: Faq;
+    'stuff-posts': StuffPost;
+    'buy-cards': BuyCard;
+    'email-phrases': EmailPhrase;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +86,10 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     products: ProductsSelect<false> | ProductsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
+    faqs: FaqsSelect<false> | FaqsSelect<true>;
+    'stuff-posts': StuffPostsSelect<false> | StuffPostsSelect<true>;
+    'buy-cards': BuyCardsSelect<false> | BuyCardsSelect<true>;
+    'email-phrases': EmailPhrasesSelect<false> | EmailPhrasesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -232,6 +240,152 @@ export interface Page {
   createdAt: string;
 }
 /**
+ * FAQ items shown on the homepage. Add, remove, or reorder freely.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faqs".
+ */
+export interface Faq {
+  id: string;
+  /**
+   * The question text shown in the accordion header.
+   */
+  question: string;
+  /**
+   * The answer. Supports bold, italic, and links (underlined automatically).
+   */
+  answer: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Lower numbers appear first. Use 10, 20, 30... to leave room.
+   */
+  order?: number | null;
+  /**
+   * Uncheck to hide this FAQ without deleting it.
+   */
+  published?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Cards shown in the "Stuff we've done" section. Add new ones anytime.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stuff-posts".
+ */
+export interface StuffPost {
+  id: string;
+  /**
+   * Title displayed on the card. E.g. "Black Friday 2018"
+   */
+  label: string;
+  /**
+   * Small tag shown above the title.
+   */
+  tag?: ('Read' | 'Watch' | 'Listen' | 'Play') | null;
+  /**
+   * Short description shown below the title.
+   */
+  description?: string | null;
+  /**
+   * Square image (1080×1080 recommended).
+   */
+  image: string | Media;
+  /**
+   * Link URL when the card is clicked.
+   */
+  href?: string | null;
+  /**
+   * Lower numbers appear first.
+   */
+  order?: number | null;
+  /**
+   * Uncheck to hide without deleting.
+   */
+  published?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * The product cards in the "Buy the game." scroll section. Control colors, labels, and which product they link to.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "buy-cards".
+ */
+export interface BuyCard {
+  id: string;
+  /**
+   * Big headline on the card. Use \n for a line break. E.g. "America's #1\ngerbil coffin."
+   */
+  label: string;
+  /**
+   * Button text. E.g. "Buy Now"
+   */
+  cta: string;
+  /**
+   * Link when clicking the card or button. E.g. /products/more-cah
+   */
+  href?: string | null;
+  /**
+   * Card background color as hex. E.g. #87CEEB, #FFE135, #FFB3D9, #90EE90, #111111
+   */
+  backgroundColor: string;
+  /**
+   * Check this for dark/black backgrounds — makes the label text and button white instead of black.
+   */
+  darkBackground?: boolean | null;
+  /**
+   * Product image shown in the top-right of the card. Upload your product shot here.
+   */
+  productImage?: (string | null) | Media;
+  /**
+   * Lower numbers appear first (leftmost in the scroll).
+   */
+  order?: number | null;
+  /**
+   * Uncheck to hide this card without deleting it.
+   */
+  published?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * The rotating phrases in the email section headline. E.g. "we chop up a Picasso,"
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "email-phrases".
+ */
+export interface EmailPhrase {
+  id: string;
+  /**
+   * The rotating phrase. Should end with a comma. E.g. "we chop up a Picasso,"
+   */
+  phrase: string;
+  /**
+   * Controls rotation order. Lower = appears earlier.
+   */
+  order?: number | null;
+  /**
+   * Uncheck to pause this phrase from appearing.
+   */
+  published?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -270,6 +424,22 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'pages';
         value: string | Page;
+      } | null)
+    | ({
+        relationTo: 'faqs';
+        value: string | Faq;
+      } | null)
+    | ({
+        relationTo: 'stuff-posts';
+        value: string | StuffPost;
+      } | null)
+    | ({
+        relationTo: 'buy-cards';
+        value: string | BuyCard;
+      } | null)
+    | ({
+        relationTo: 'email-phrases';
+        value: string | EmailPhrase;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -406,6 +576,60 @@ export interface PagesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faqs_select".
+ */
+export interface FaqsSelect<T extends boolean = true> {
+  question?: T;
+  answer?: T;
+  order?: T;
+  published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "stuff-posts_select".
+ */
+export interface StuffPostsSelect<T extends boolean = true> {
+  label?: T;
+  tag?: T;
+  description?: T;
+  image?: T;
+  href?: T;
+  order?: T;
+  published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "buy-cards_select".
+ */
+export interface BuyCardsSelect<T extends boolean = true> {
+  label?: T;
+  cta?: T;
+  href?: T;
+  backgroundColor?: T;
+  darkBackground?: T;
+  productImage?: T;
+  order?: T;
+  published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "email-phrases_select".
+ */
+export interface EmailPhrasesSelect<T extends boolean = true> {
+  phrase?: T;
+  order?: T;
+  published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -470,48 +694,154 @@ export interface SiteSetting {
   createdAt?: string | null;
 }
 /**
+ * Controls all text content on the homepage. FAQs, Buy Cards, Stuff Posts, and Email Phrases are managed in their own Collections.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "home-page".
  */
 export interface HomePage {
   id: string;
+  /**
+   * Hero section — the full-screen card animation.
+   */
   hero?: {
-    title?: string | null;
-    quote?: string | null;
-    quoteSource?: string | null;
-    cards?:
+    /**
+     * Rotating press quotes shown bottom-left of the hero. They cycle with the card sets.
+     */
+    quotes?:
       | {
-          text: string;
-          black?: boolean | null;
+          /**
+           * Include quotes. E.g. "Hysterical."
+           */
+          quote: string;
+          /**
+           * Publication name. E.g. TIME
+           */
+          source: string;
           id?: string | null;
         }[]
       | null;
   };
+  /**
+   * The white "about" section below the hero.
+   */
   about?: {
+    /**
+     * Large bold paragraph — the main description.
+     */
     paragraph1?: string | null;
+    /**
+     * Smaller second paragraph.
+     */
     paragraph2?: string | null;
   };
-  buySection?: {
-    heading?: string | null;
+  /**
+   * The "Buy the game." scroll section heading. Cards are managed in the Buy Cards collection.
+   */
+  buySection: {
+    heading: string;
   };
-  stealSection?: {
-    heading?: string | null;
+  /**
+   * The white "Steal the game." section.
+   */
+  stealSection: {
+    heading: string;
+    /**
+     * First paragraph body text.
+     */
     body?: string | null;
+    /**
+     * Second paragraph (the disclaimer).
+     */
+    body2?: string | null;
+    /**
+     * PDF download URL for both buttons.
+     */
+    downloadUrl?: string | null;
+    /**
+     * Text inside the starburst badge. Use \n for line breaks.
+     */
     badgeText?: string | null;
   };
-  emailSection?: {
-    heading?: string | null;
-    disclaimer?: string | null;
+  /**
+   * The dark "Stuff we've done." section. Cards are managed in the Stuff Posts collection.
+   */
+  stuffSection: {
+    heading: string;
+    /**
+     * Text inside the starburst badge top-right of the section.
+     */
+    badgeText?: string | null;
   };
-  faq?:
-    | {
-        question: string;
-        answer: string;
-        id?: string | null;
-      }[]
-    | null;
+  /**
+   * The email sign-up section. Rotating phrases are managed in the Email Phrases collection.
+   */
+  emailSection?: {
+    /**
+     * Text before the rotating phrase.
+     */
+    headingPrefix?: string | null;
+    /**
+     * Text after the rotating phrase.
+     */
+    headingSuffix?: string | null;
+    disclaimer?: string | null;
+    /**
+     * Placeholder text in the email input box.
+     */
+    placeholder?: string | null;
+  };
+  /**
+   * FAQ section settings. Individual questions are managed in the FAQs collection.
+   */
+  faqSection: {
+    heading: string;
+  };
+  /**
+   * Footer content.
+   */
   footer?: {
     copyright?: string | null;
+    /**
+     * Links in the Shop column.
+     */
+    shopLinks?:
+      | {
+          label: string;
+          href?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Links in the Info column.
+     */
+    infoLinks?:
+      | {
+          label: string;
+          href?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Links in the Find Us column.
+     */
+    findUsLinks?:
+      | {
+          label: string;
+          href?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Legal links in the footer bottom bar.
+     */
+    legalLinks?:
+      | {
+          label: string;
+          href?: string | null;
+          id?: string | null;
+        }[]
+      | null;
   };
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -549,14 +879,11 @@ export interface HomePageSelect<T extends boolean = true> {
   hero?:
     | T
     | {
-        title?: T;
-        quote?: T;
-        quoteSource?: T;
-        cards?:
+        quotes?:
           | T
           | {
-              text?: T;
-              black?: T;
+              quote?: T;
+              source?: T;
               id?: T;
             };
       };
@@ -576,25 +903,61 @@ export interface HomePageSelect<T extends boolean = true> {
     | {
         heading?: T;
         body?: T;
+        body2?: T;
+        downloadUrl?: T;
+        badgeText?: T;
+      };
+  stuffSection?:
+    | T
+    | {
+        heading?: T;
         badgeText?: T;
       };
   emailSection?:
     | T
     | {
-        heading?: T;
+        headingPrefix?: T;
+        headingSuffix?: T;
         disclaimer?: T;
+        placeholder?: T;
       };
-  faq?:
+  faqSection?:
     | T
     | {
-        question?: T;
-        answer?: T;
-        id?: T;
+        heading?: T;
       };
   footer?:
     | T
     | {
         copyright?: T;
+        shopLinks?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+              id?: T;
+            };
+        infoLinks?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+              id?: T;
+            };
+        findUsLinks?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+              id?: T;
+            };
+        legalLinks?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+              id?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;

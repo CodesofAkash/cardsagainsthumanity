@@ -9,6 +9,10 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import Products from './collections/Products'
 import Pages from './collections/Pages'
+import FAQs from './collections/FAQs'
+import StuffPosts from './collections/StuffPosts'
+import BuyCards from './collections/BuyCards'
+import EmailPhrases from './collections/EmailPhrases'
 import SiteSettings from './globals/SiteSettings'
 import HomePage from './globals/HomePage'
 
@@ -34,7 +38,16 @@ export default buildConfig({
     },
   },
 
-  collections: [Users, Media, Products, Pages],
+  collections: [
+    Users,
+    Media,
+    Products,
+    Pages,
+    FAQs,          // ← homepage FAQ accordion
+    StuffPosts,    // ← "Stuff we've done" cards
+    BuyCards,      // ← "Buy the game" scroll cards
+    EmailPhrases,  // ← rotating phrases in email section
+  ],
   globals: [SiteSettings, HomePage],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

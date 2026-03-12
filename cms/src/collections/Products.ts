@@ -90,7 +90,7 @@ const Products: CollectionConfig = {
               // 2. Write Medusa IDs back to Payload
               // Note: direct DB update to avoid infinite hook loop
               const { getPayload } = await import('payload')
-              const payload = await getPayload({ config: (await import('../../payload.config')).default })
+              const payload = await getPayload({ config: (await import('../payload.config')).default })
               await payload.update({
                 collection: 'products',
                 id: doc.id,

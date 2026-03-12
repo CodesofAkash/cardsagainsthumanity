@@ -78,10 +78,12 @@ const CARD_SETS = [
   { black: "A new adventure awaits at Walt Disney's Magical Kingdom of ___________!","whites": ["Drug-resistant bacteria.","The Flintstones.","Praying the gay away.","Exactly what you'd expect.","Giving 110%.","Tasteful sideboob."] },
   { black: "Yo, is ___________ racist?","whites": ["The Trail of Tears.","My collection of exotic sex trophies.","Auschwitz.","A tiny horse.","Whatever Morgan Freeman tells me to do.","Abstinence-only education."] },
 ];
+
 const QUOTES = [
   { quote: '"Bad."', source: "NPR" }, { quote: '"Stupid."', source: "Bloomberg" },
   { quote: '"Hysterical."', source: "TIME" }, { quote: '"Wrong."', source: "Washington Post" },
 ];
+
 const SPREAD = [
   { x: -290, y: -140, rot: -12 }, { x: 80, y: -170, rot: 6 },
   { x: -320, y: 30, rot: 9 }, { x: 260, y: 20, rot: -7 },
@@ -237,8 +239,7 @@ function AboutSection({ cmsData }: { cmsData: any }) {
   );
 }
 
-// ── Buy Section ───────────────────────────────────────────────────────────────
-// Config: 5 product cards matching the reference exactly
+
 const BUY_CONFIG = [
   { slug: "more-cah",   bg: "#87CEEB", textColor: "#000", label: "America's #1\ngerbil coffin.",  cta: "Buy Now",           href: "/products/more-cah" },
   { slug: "family",     bg: "#FFE135", textColor: "#000", label: "Play CAH\nwith your kids.",    cta: "Buy Family Edition", href: "#" },
@@ -373,7 +374,6 @@ function BuySection({ cmsProducts }: { cmsProducts: any[] }) {
   );
 }
 
-// ── Starburst ─────────────────────────────────────────────────────────────────
 function Starburst({ text, bg = "#c8f7c5", size = 130, textColor = "#000" }: { text: string; bg?: string; size?: number; textColor?: string }) {
   const cx = size / 2, cy = size / 2, n = 16, oR = cx - 2, iR = cx - 13;
   let d = "";
@@ -393,7 +393,6 @@ function Starburst({ text, bg = "#c8f7c5", size = 130, textColor = "#000" }: { t
   );
 }
 
-// ── Steal — centred content ───────────────────────────────────────────────────
 function StealSection({ cmsData }: { cmsData: any }) {
   const heading  = cmsData?.stealSection?.heading  || "Steal the game.";
   const body     = cmsData?.stealSection?.body     || "Since day one, Cards Against Humanity has been available as a free download on our website. You can download the PDFs and printing instructions right here—all you need is a printer, scissors, and a prehensile appendage.";
@@ -444,7 +443,6 @@ function StealSection({ cmsData }: { cmsData: any }) {
   );
 }
 
-// ── Stuff ─────────────────────────────────────────────────────────────────────
 const STUFF = [
   { img: "https://img.cah.io/images/vc07edlh/production/c1f921d8c8fd60969110124ebb20ad5d9878861c-1080x1080.png?auto=format&q=75&w=400", tag: "Read", label: "Black Friday 2018", desc: "Holy fuck we had some deals." },
   { img: "https://img.cah.io/images/vc07edlh/production/31fcc3f68a626462e5707bcc5ce19ee716f2e173-1080x1080.png?auto=format&q=75&w=400", tag: "Read", label: "Science Scholarship", desc: "A full-tuition scholarship for women." },
@@ -483,7 +481,6 @@ function StuffSection() {
   );
 }
 
-// ── Email — centered ──────────────────────────────────────────────────────────
 const EMAIL_PHRASES = [
   "we chop up a Picasso,",
   "we buy a private island,",
@@ -544,7 +541,6 @@ function EmailSection({ cmsData }: { cmsData: any }) {
   );
 }
 
-// ── FAQ — full text, all questions, underlined links ─────────────────────────
 const FAQS = [
   { q: "Where can I buy Cards Against Humanity?",
     a: <>Our products are available all over the place, such as our <a href="#" className="underline">webstore</a>, <a href="#" className="underline">Amazon</a>, and at <a href="#" className="underline">all of these retailers</a>.</> },
@@ -634,7 +630,6 @@ function FAQSection({ cmsData }: { cmsData: any }) {
   );
 }
 
-// ── Footer — pixel perfect ────────────────────────────────────────────────────
 function Footer({ cmsData }: { cmsData: any }) {
   const [email, setEmail] = useState("");
   const copyright = cmsData?.footer?.copyright || "©2026 Cards Against Humanity LLC";
