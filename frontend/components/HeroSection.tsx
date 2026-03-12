@@ -217,13 +217,21 @@ export default function HeroSection({ quotes, cartCount = 0, onCartOpen = () => 
           </button>
           {/* Cart — opens CartDrawer via onCartOpen prop */}
           <button
-            onClick={() => { closeAll(); onCartOpen(); }}
-            className="text-white hover:opacity-70 transition-opacity flex items-center gap-2 bg-transparent border-none cursor-pointer"
+            className="relative flex items-center hover:opacity-70 transition-opacity"
             aria-label="Open cart"
+            onClick={() => { closeAll(); onCartOpen(); }}
           >
             <CartIcon />
-            <span className="font-black" style={{ fontSize: "clamp(1rem,1.4vw,1.3rem)" }}>
-              \{cartCount}/
+
+            <span
+              className="absolute font-extrabold"
+              style={{
+                fontSize: "20px",
+                top: "-6px",
+                right: "20px",
+              }}
+            >
+              {cartCount}
             </span>
           </button>
         </div>
