@@ -1,32 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Preload Inter with swap — prevents FOIT, improves FCP
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+  preload: true,
 });
 
 export const metadata: Metadata = {
   title: "Cards Against Humanity",
-  description: "A clone of the popular card game Cards Against Humanity, built with Next.js and TypeScript.",
+  description: "A party game for horrible people.",
+  openGraph: {
+    title: "Cards Against Humanity",
+    description: "A party game for horrible people.",
+    type: "website",
+  },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={inter.variable}>
+      <body style={{ fontFamily: "var(--font-inter), sans-serif", margin: 0, background: "#000" }}>
         {children}
       </body>
     </html>

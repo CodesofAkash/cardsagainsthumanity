@@ -1,42 +1,27 @@
-# Node
+# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Env files
-.env
-.env.local
-.env*.local
-*.pem
-
-# Next.js
-.next/
-out/
+.pnp
+.pnp.js
 
 # Build outputs
-build/
+.next/
+out/
 dist/
-.cache/
-.medusa/
+build/
 
-# Media / uploads
-/cms/media/
-/medusa/uploads/
+# Environment files — NEVER commit these
+.env
+.env.local
+.env.production
+.env.development
+*.env
+
+# Payload CMS generated files
+cms/src/payload-types.ts
+cms/.payload/
 
 # Misc
 .DS_Store
-*.tsbuildinfo
-
-# Vercel
+*.log
+npm-debug.log*
 .vercel
-
-# Testing
-coverage/
-/cms/test-results/
-/cms/playwright-report/
-/cms/blob-report/
-/cms/playwright/.cache/
-
-# Payload
-/cms/.payload/
