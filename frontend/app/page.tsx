@@ -1,6 +1,3 @@
-// ROOT PAGE — pure Server Component
-// No "use client", no dynamic(), no ssr:false allowed here.
-// All data fetched server-side (ISR), passed as props to ClientShell.
 import Image from "next/image";
 import ClientShell from "@/components/ClientShell";
 
@@ -85,28 +82,16 @@ const FALLBACK_BUY_CARDS = [
   { label: "What is\nthis stuff?",          cta: "Find Out",           href: "#",                  backgroundColor: "#111111", darkBackground: true  },
 ];
 
-// ── PURE SERVER COMPONENTS (zero client JS) ───────────────────────────────────
-
-// ── PASTE THIS AboutSection into your page.tsx, replacing the existing one ────
-// The 9 real CAH icons from their CDN are scattered around the section edges,
-// matching the layout on the original site.
-
-// Add this import at the top of page.tsx (it's already there):
-// import Image from "next/image";
-
-// Also add img.cah.io to next.config.ts remotePatterns if not already present.
-// { protocol: "https", hostname: "img.cah.io" }  ← already in your config ✅
-
 const CAH_ICONS = [
-  { src: "https://img.cah.io/images/vc07edlh/production/410d7640a35a6d1c6b1c5532a8865ce9566f7aef-38x38.svg", w: 38, h: 38 },
-  { src: "https://img.cah.io/images/vc07edlh/production/7755ab953426b92bcee84da84db54d73c90fdb82-38x36.svg", w: 38, h: 36 },
-  { src: "https://img.cah.io/images/vc07edlh/production/844969c83be9f4736138e20b1f5160624c32b27d-38x37.svg", w: 38, h: 37 },
-  { src: "https://img.cah.io/images/vc07edlh/production/4e31f1365aac66e92504f15c4b0dc6fed6c35467-37x37.svg", w: 37, h: 37 },
-  { src: "https://img.cah.io/images/vc07edlh/production/99b5ad3a812bbfd8b22aa17a2e2b09ed714007ec-38x38.svg", w: 38, h: 38 },
-  { src: "https://img.cah.io/images/vc07edlh/production/c3ad2ad955dc7d6d78dab0538a95c326ba540e3b-38x38.svg", w: 38, h: 38 },
-  { src: "https://img.cah.io/images/vc07edlh/production/2b4022e0540298d890c5c014a48962dda608b599-37x37.svg", w: 37, h: 37 },
-  { src: "https://img.cah.io/images/vc07edlh/production/5c65c30fc763b717a6aeb4e3e31396dc1eff25cb-37x37.svg", w: 37, h: 37 },
-  { src: "https://img.cah.io/images/vc07edlh/production/dcd9c155e28ce85538e4ee426bdac4c189e4bd3f-38x36.svg", w: 38, h: 36 },
+  { src: "https://img.cah.io/images/vc07edlh/production/410d7640a35a6d1c6b1c5532a8865ce9566f7aef-38x38.svg", w: 28, h: 28 },
+  { src: "https://img.cah.io/images/vc07edlh/production/7755ab953426b92bcee84da84db54d73c90fdb82-38x36.svg", w: 28, h: 26 },
+  { src: "https://img.cah.io/images/vc07edlh/production/844969c83be9f4736138e20b1f5160624c32b27d-38x37.svg", w: 28, h: 27 },
+  { src: "https://img.cah.io/images/vc07edlh/production/4e31f1365aac66e92504f15c4b0dc6fed6c35467-37x37.svg", w: 27, h: 27 },
+  { src: "https://img.cah.io/images/vc07edlh/production/99b5ad3a812bbfd8b22aa17a2e2b09ed714007ec-38x38.svg", w: 28, h: 28 },
+  { src: "https://img.cah.io/images/vc07edlh/production/c3ad2ad955dc7d6d78dab0538a95c326ba540e3b-38x38.svg", w: 28, h: 28 },
+  { src: "https://img.cah.io/images/vc07edlh/production/2b4022e0540298d890c5c014a48962dda608b599-37x37.svg", w: 27, h: 27 },
+  { src: "https://img.cah.io/images/vc07edlh/production/5c65c30fc763b717a6aeb4e3e31396dc1eff25cb-37x37.svg", w: 27, h: 27 },
+  { src: "https://img.cah.io/images/vc07edlh/production/dcd9c155e28ce85538e4ee426bdac4c189e4bd3f-38x36.svg", w: 28, h: 26 },
 ];
 
 // Positions scattered around the edges matching the original site layout
@@ -123,17 +108,17 @@ const ICON_POS: React.CSSProperties[] = [
 ];
 
 function AboutSection({ cmsHome }: { cmsHome: any }) {
-  const p1 = cmsHome?.about?.paragraph1 || "Cards Against Humanity is a fill-in-the-blank party game that turns your awkward personality and lackluster social skills into hours of fun! Wow.";
+  const p1 = cmsHome?.about?.paragraph1 || "is a fill-in-the-blank party game that turns your awkward personality and lackluster social skills into hours of fun! Wow.";
   const p2 = cmsHome?.about?.paragraph2 || "The game is simple. Each round, one player asks a question from a black card, and everyone else answers with their funniest white card.";
 
   return (
-    <section className="bg-white relative overflow-hidden" style={{ padding: "112px 48px" }}>
+    <section className="bg-white relative h-[85vh] overflow-hidden" style={{ padding: "112px 48px" }}>
       {/* Real CAH icons scattered around the section */}
       {CAH_ICONS.map((icon, i) => (
         <div
           key={i}
           className="absolute pointer-events-none select-none"
-          style={{ ...ICON_POS[i], opacity: 0.55 }}
+          style={{ ...ICON_POS[i], opacity: 1 }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -147,13 +132,19 @@ function AboutSection({ cmsHome }: { cmsHome: any }) {
         </div>
       ))}
 
-      <div className="relative z-10 mx-auto text-center" style={{ maxWidth: 820 }}>
-        <p
-          className="text-black font-black leading-tight mb-10"
-          style={{ fontSize: "clamp(2rem,3.5vw,2.75rem)", letterSpacing: "-0.02em", lineHeight: 1.2 }}
+      <div className="relative z-10 mx-auto mt-16 text-center" style={{ maxWidth: 820 }}>
+        <span
+          className="text-black font-black leading-relaxed"
+          style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.2 }}
+        >
+          {'Cards Against Humanity '}
+        </span>
+        <span
+          className="text-black leading-relaxed"
+          style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.5 }}
         >
           {p1}
-        </p>
+        </span>
         <p
           className="text-black leading-relaxed"
           style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.5 }}
@@ -231,8 +222,15 @@ function StuffSection({ cmsHome, stuffPosts }: { cmsHome: any; stuffPosts: any[]
             <a key={post.id ?? i} href={post.href || "#"} style={{ textDecoration: "none", aspectRatio: "1/1", display: "block", position: "relative" }}
               className="rounded-2xl overflow-hidden group">
               {imgUrl && (
-                <Image src={imgUrl} alt={post.label} fill sizes="(max-width:768px) 100vw, 33vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                <Image
+                  src={imgUrl}
+                  alt={post.label}
+                  fill
+                  unoptimized
+                  sizes="(max-width:768px) 100vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
+                />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -278,7 +276,7 @@ function FooterSection({ cmsHome }: { cmsHome: any }) {
             <input type="email" name="email" placeholder="Email Address"
               className="flex-1 outline-none bg-white text-black placeholder-gray-400"
               style={{ padding: "12px 14px", fontSize: "0.95rem" }} />
-            <button type="submit" className="flex items-center justify-center rounded-full border-2 border-black hover:bg-black hover:text-white transition-colors flex-shrink-0"
+            <button type="submit" className="flex items-center justify-center rounded-full border-2 text-black border-black hover:bg-black hover:text-white transition-colors flex-shrink-0"
               style={{ width: 36, height: 36, margin: "0 6px" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
@@ -318,11 +316,6 @@ export default async function Home() {
 
   return (
     <main>
-      {/*
-        ClientShell is a "use client" component that owns all dynamic() + ssr:false imports.
-        Static server sections (About, Steal, Stuff, Footer) are passed as children —
-        they stay server-rendered, no client JS cost.
-      */}
       <ClientShell
         cmsHome={cmsHome}
         quotes={quotes}

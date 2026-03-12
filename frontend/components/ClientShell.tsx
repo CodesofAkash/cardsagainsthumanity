@@ -1,12 +1,13 @@
 "use client";
+
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import CartProvider, { useCartCtx } from "@/components/CartProvider";
 import CartDrawer from "@/components/CartDrawer";
 import CheckoutDrawer from "@/components/CheckoutDrawer";
+import BuySection from "@/components/BuySection";
+import HeroSection from "@/components/HeroSection";
 
-const HeroSection  = dynamic(() => import("@/components/HeroSection"),  { ssr: false });
-const BuySection   = dynamic(() => import("@/components/BuySection"),   { ssr: false });
 const EmailSection = dynamic(() => import("@/components/EmailSection"), { ssr: false });
 const FAQSection   = dynamic(() => import("@/components/FAQSection"),   { ssr: false });
 const Navbar       = dynamic(() => import("@/components/Navbar"),       { ssr: false });
@@ -46,10 +47,10 @@ function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSl
 
       {aboutSlot}
 
-      <BuySection
+      {<BuySection
         heading={cmsHome?.buySection?.heading || "Buy the game."}
         buyCards={buyCardItems}
-      />
+      />}
 
       {stealSlot}
       {stuffSlot}

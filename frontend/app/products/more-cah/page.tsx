@@ -5,6 +5,7 @@ import { useCart, getOrCreateCart, fetchCartById, medusaHeaders, MEDUSA_URL } fr
 import CartDrawer from "@/components/CartDrawer";
 import CheckoutDrawer from "@/components/CheckoutDrawer";
 import gsap from "gsap";
+import { CartIcon } from "@/components/MegaMenus";
 
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
 const VARIANT_ID = process.env.NEXT_PUBLIC_MEDUSA_VARIANT_ID || "";
@@ -56,8 +57,159 @@ function StarburstBadge({ text }: { text: string }) {
   );
 }
 
-// ── Related Products — fetched from CMS, excluding current product ─────────────
-function RelatedProducts({ excludeSlug }: { excludeSlug: string }) {
+// ── Single Related Product Card ───────────────────────────────────────────────
+// Manages its own adding/added state so each button is independent
+function RelatedProductCard({
+  product,
+  onCartUpdate,
+  onCartOpen,
+}: {
+  product: any;
+  onCartUpdate: (data: any) => void;
+  onCartOpen: () => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [added,  setAdded]  = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const imgUrl     = product.images?.[0]?.image?.url ? cmsImg(product.images[0].image.url) : null;
+  const price      = product.price ? `$${(product.price / 100).toFixed(0)}` : null;
+  const href       = product.slug ? `/products/${product.slug}` : "#";
+  const variantId  = product.variantId || "";
+
+  async function handleAdd(e: React.MouseEvent) {
+    // Stop the click from navigating to the product page
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!variantId) {
+      console.warn("No variantId for product:", product.title);
+      return;
+    }
+
+    setAdding(true);
+    if (btnRef.current) {
+      gsap.fromTo(btnRef.current, { scale: 0.95 }, { scale: 1, duration: 0.4, ease: "back.out(2)" });
+    }
+
+    try {
+      const cartId = await getOrCreateCart();
+      await fetch(`${MEDUSA_URL}/store/carts/${cartId}/line-items`, {
+        method: "POST",
+        headers: medusaHeaders,
+        body: JSON.stringify({ variant_id: variantId, quantity: 1 }),
+      });
+      const data = await fetchCartById(cartId);
+      onCartUpdate(data);
+      setAdded(true);
+      onCartOpen(); // open cart drawer after adding
+      setTimeout(() => setAdded(false), 2500);
+    } catch (err) {
+      console.error("Add to cart failed:", err);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <a
+      href={href}
+      className="relative flex flex-col cursor-pointer group no-underline"
+      style={{
+        background: "#000",
+        border: "1px solid rgba(255,255,255,0.15)",
+        borderRadius: 16,
+        overflow: "hidden",
+        minHeight: 520,
+        textDecoration: "none",
+      }}
+    >
+      {/* Starburst */}
+      <div className="absolute top-4 right-4 z-10">
+        <StarburstBadge text="New!" />
+      </div>
+
+      {/* Title + desc */}
+      <div className="p-7 pb-0">
+        <h3 className="text-white font-black mb-3" style={{ fontSize: "1.5rem", letterSpacing: "-0.01em" }}>
+          {product.title}
+        </h3>
+        <p className="text-white/70" style={{ fontSize: "1rem", lineHeight: 1.5 }}>
+          {product.description}
+        </p>
+      </div>
+
+      {/* Product image */}
+      <div className="flex-1 flex items-center justify-center px-6 py-4" style={{ minHeight: 260 }}>
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt={product.title}
+            style={{
+              maxHeight: 240,
+              maxWidth: "100%",
+              objectFit: "contain",
+              filter: "drop-shadow(0 10px 30px rgba(0,0,0,0.8))",
+            }}
+          />
+        ) : (
+          <div style={{ width: 140, height: 200, background: "#111", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="text-white/30 font-black text-sm text-center px-4">{product.title}</span>
+          </div>
+        )}
+      </div>
+
+      {/* CTA button */}
+      <div className="p-5 pt-0">
+        {price && variantId ? (
+          <button
+            ref={btnRef}
+            onClick={handleAdd}
+            disabled={adding}
+            className="w-full font-black rounded-full flex items-center justify-between transition-all"
+            style={{
+              background: added ? "#22c55e" : "white",
+              color: added ? "white" : "black",
+              padding: "18px 28px",
+              fontSize: "1.15rem",
+              border: "none",
+              cursor: adding ? "not-allowed" : "pointer",
+            }}
+          >
+            <span>{adding ? "Adding..." : added ? "✓ Added!" : "Add to Cart"}</span>
+            <span>{price}</span>
+          </button>
+        ) : (
+          <button
+            disabled
+            className="w-full font-black rounded-full"
+            style={{
+              background: "transparent",
+              color: "white",
+              padding: "18px 28px",
+              fontSize: "1.15rem",
+              border: "2px solid rgba(255,255,255,0.3)",
+              cursor: "not-allowed",
+            }}
+          >
+            {!variantId ? "Not Available" : "Unavailable In Your Region"}
+          </button>
+        )}
+      </div>
+    </a>
+  );
+}
+
+// ── Related Products section ──────────────────────────────────────────────────
+function RelatedProducts({
+  excludeSlug,
+  onCartUpdate,
+  onCartOpen,
+}: {
+  excludeSlug: string;
+  onCartUpdate: (data: any) => void;
+  onCartOpen: () => void;
+}) {
   const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -65,7 +217,6 @@ function RelatedProducts({ excludeSlug }: { excludeSlug: string }) {
       .then(r => r.json())
       .then(d => {
         const all = d?.docs ?? [];
-        // Exclude current product, show up to 3
         setProducts(all.filter((p: any) => p.slug !== excludeSlug).slice(0, 3));
       })
       .catch(() => {});
@@ -79,52 +230,14 @@ function RelatedProducts({ excludeSlug }: { excludeSlug: string }) {
         You should check out:
       </h2>
       <div className="grid grid-cols-3 gap-4">
-        {products.map((p: any, i: number) => {
-          const imgUrl = p.images?.[0]?.image?.url ? cmsImg(p.images[0].image.url) : null;
-          const price = p.price ? `$${(p.price / 100).toFixed(2)}` : null;
-          const href = p.slug ? `/products/${p.slug}` : "#";
-
-          return (
-            <a key={i} href={href} className="relative flex flex-col cursor-pointer group no-underline"
-              style={{ background: "#000", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 16, overflow: "hidden", minHeight: 520, textDecoration: "none" }}>
-              {/* Starburst */}
-              <div className="absolute top-4 right-4 z-10"><StarburstBadge text="New!" /></div>
-
-              {/* Title + desc */}
-              <div className="p-7 pb-0">
-                <h3 className="text-white font-black mb-3" style={{ fontSize: "1.5rem", letterSpacing: "-0.01em" }}>{p.title}</h3>
-                <p className="text-white/70" style={{ fontSize: "1rem", lineHeight: 1.5 }}>{p.description}</p>
-              </div>
-
-              {/* Product image from CMS */}
-              <div className="flex-1 flex items-center justify-center px-6 py-4" style={{ minHeight: 260 }}>
-                {imgUrl ? (
-                  <img src={imgUrl} alt={p.title}
-                    style={{ maxHeight: 240, maxWidth: "100%", objectFit: "contain", filter: "drop-shadow(0 10px 30px rgba(0,0,0,0.8))" }} />
-                ) : (
-                  <div style={{ width: 140, height: 200, background: "#111", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span className="text-white/30 font-black text-sm text-center px-4">{p.title}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* CTA */}
-              <div className="p-5 pt-0">
-                {price ? (
-                  <button className="w-full font-black rounded-full flex items-center justify-between hover:opacity-90 transition-opacity"
-                    style={{ background: "white", color: "black", padding: "18px 28px", fontSize: "1.15rem", border: "none" }}>
-                    <span>Add to Cart</span><span>{price}</span>
-                  </button>
-                ) : (
-                  <button className="w-full font-black rounded-full"
-                    style={{ background: "transparent", color: "white", padding: "18px 28px", fontSize: "1.15rem", border: "2px solid rgba(255,255,255,0.3)" }}>
-                    Unavailable In Your Region
-                  </button>
-                )}
-              </div>
-            </a>
-          );
-        })}
+        {products.map((p: any, i: number) => (
+          <RelatedProductCard
+            key={p.id ?? i}
+            product={p}
+            onCartUpdate={onCartUpdate}
+            onCartOpen={onCartOpen}
+          />
+        ))}
       </div>
     </section>
   );
@@ -154,7 +267,7 @@ function Footer() {
           <div className="relative border-2 border-black rounded-lg flex items-center overflow-hidden">
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="Email Address" className="flex-1 px-3 py-3 text-base outline-none text-black bg-white" />
-            <button className="mr-1.5 w-8 h-8 rounded-full border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors flex-shrink-0">
+            <button className="mr-1.5 w-8 h-8 rounded-full border-2 text-black border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors flex-shrink-0">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
               </svg>
@@ -175,55 +288,81 @@ function Footer() {
   );
 }
 
-// ── Navbar ────────────────────────────────────────────────────────────────────
+// ── Page Navbar ───────────────────────────────────────────────────────────────
 function Navbar({ cartCount, onCartOpen }: { cartCount: number; onCartOpen: () => void }) {
-  const [shopOpen, setShopOpen] = useState(false);
+  const [shopOpen,  setShopOpen]  = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+
   useEffect(() => {
     const close = () => { setShopOpen(false); setAboutOpen(false); };
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, []);
+
+  const chevron = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M7 10l5 5 5-5z" />
+    </svg>
+  );
+
   return (
     <nav className="bg-black sticky top-0 z-30 flex items-center justify-between"
       style={{ padding: "18px 40px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-      <Link href="/" className="text-white font-black hover:opacity-80 transition-opacity" style={{ fontSize: "1.25rem" }}>
+      <Link href="/" className="text-white font-black hover:opacity-80 transition-opacity" style={{ fontSize: "1.25rem", textDecoration: "none" }}>
         Cards Against Humanity
       </Link>
       <div className="flex items-center" style={{ gap: "48px" }}>
+        {/* Shop */}
         <div className="relative" onClick={e => e.stopPropagation()}>
-          <button className="text-white font-black flex items-center hover:opacity-70" style={{ fontSize: "1.35rem", gap: 6 }}
-            onClick={() => { setShopOpen(!shopOpen); setAboutOpen(false); }}>
-            Shop <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+          <button className="text-white font-black flex items-center gap-1.5 hover:opacity-70 bg-transparent border-none cursor-pointer"
+            style={{ fontSize: "1.35rem" }}
+            onClick={() => { setShopOpen(o => !o); setAboutOpen(false); }}>
+            Shop {chevron}
           </button>
           {shopOpen && (
-            <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl py-2 w-56 z-50">
+            <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl py-2 z-50" style={{ minWidth: 220 }}>
               {["All Products","Main Games","Expansions","Family","Packs","Other Stuff"].map(x => (
-                <a key={x} href="#" className="block px-6 py-2.5 hover:bg-gray-50 font-black text-base text-black">{x}</a>
+                <a key={x} href="#" className="block px-6 py-2.5 hover:bg-gray-50 font-black text-base text-black" style={{ textDecoration: "none" }}>{x}</a>
               ))}
             </div>
           )}
         </div>
+
+        {/* About */}
         <div className="relative" onClick={e => e.stopPropagation()}>
-          <button className="text-white font-black flex items-center hover:opacity-70" style={{ fontSize: "1.35rem", gap: 6 }}
-            onClick={() => { setAboutOpen(!aboutOpen); setShopOpen(false); }}>
-            About <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+          <button className="text-white font-black flex items-center gap-1.5 hover:opacity-70 bg-transparent border-none cursor-pointer"
+            style={{ fontSize: "1.35rem" }}
+            onClick={() => { setAboutOpen(o => !o); setShopOpen(false); }}>
+            About {chevron}
           </button>
           {aboutOpen && (
-            <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl py-2 w-56 z-50">
+            <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl py-2 z-50" style={{ minWidth: 220 }}>
               {["Our Story","Team","Press","Careers","Contact"].map(x => (
-                <a key={x} href="#" className="block px-6 py-2.5 hover:bg-gray-50 font-black text-base text-black">{x}</a>
+                <a key={x} href="#" className="block px-6 py-2.5 hover:bg-gray-50 font-black text-base text-black" style={{ textDecoration: "none" }}>{x}</a>
               ))}
             </div>
           )}
         </div>
-        <button onClick={onCartOpen} className="text-white font-black hover:opacity-70 flex items-center gap-1" style={{ fontSize: "1.35rem" }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-          </svg>
-          {cartCount}/
-        </button>
+
+        {/* Cart */}
+        <button
+            className="relative flex items-center hover:opacity-70 transition-opacity"
+            aria-label="Open cart"
+            onClick={onCartOpen}
+          >
+            <CartIcon />
+
+            <span
+              className="absolute font-extrabold"
+              style={{
+                fontSize: "20px",
+                top: "-6px",
+                right: "20px",
+              }}
+            >
+              {cartCount}
+            </span>
+          </button>
       </div>
     </nav>
   );
@@ -231,12 +370,12 @@ function Navbar({ cartCount, onCartOpen }: { cartCount: number; onCartOpen: () =
 
 // ── Main Product Page ─────────────────────────────────────────────────────────
 export default function ProductPage() {
-  const [product, setProduct] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [added, setAdded] = useState(false);
+  const [product,   setProduct]   = useState<any>(null);
+  const [loading,   setLoading]   = useState(true);
+  const [adding,    setAdding]    = useState(false);
+  const [added,     setAdded]     = useState(false);
   const [activeImg, setActiveImg] = useState(0);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const btnRef     = useRef<HTMLButtonElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
 
   const { cartData, cartCount, cartOpen, checkoutOpen, setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCart();
@@ -255,7 +394,6 @@ export default function ProductPage() {
     }
   }, [loading]);
 
-  // Use the variant ID from the CMS product if available, otherwise env var
   const variantId = product?.variantId || VARIANT_ID;
 
   async function handleAddToCart() {
@@ -276,12 +414,11 @@ export default function ProductPage() {
     finally { setAdding(false); }
   }
 
-  // Build images array from CMS
   const images: string[] = product?.images?.length
     ? product.images.map((img: any) => img.image?.url ? cmsImg(img.image.url) : "").filter(Boolean)
     : ["https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Cards_against_humanity_box.png/220px-Cards_against_humanity_box.png"];
 
-  const mainImage = images[activeImg] || images[0];
+  const mainImage    = images[activeImg] || images[0];
   const priceDisplay = product?.price ? `$${(product.price / 100).toFixed(0)}` : "$29";
 
   if (loading)
@@ -312,7 +449,7 @@ export default function ProductPage() {
         <div ref={productRef} className="relative z-10"
           style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "start" }}>
 
-          {/* Left: Main image + thumbnails */}
+          {/* Left: images */}
           <div className="animate-in flex flex-col gap-4">
             <div className="flex items-center justify-center" style={{ minHeight: 420 }}>
               <img src={mainImage} alt={product.title}
@@ -332,27 +469,23 @@ export default function ProductPage() {
             )}
           </div>
 
-          {/* Right: Info */}
+          {/* Right: info */}
           <div style={{ paddingTop: 8 }}>
             <h1 className="animate-in text-white font-black leading-tight"
               style={{ fontSize: "clamp(2.2rem,4vw,3rem)", letterSpacing: "-0.02em", marginBottom: 28 }}>
               {product.title}
             </h1>
 
-            {/* Description — first sentence bold */}
             {product.description && (
               <div className="animate-in text-white leading-relaxed mb-6" style={{ fontSize: "1.1rem" }}>
                 {(() => {
                   const firstDot = product.description.indexOf(". ");
                   if (firstDot === -1) return <p><strong>{product.description}</strong></p>;
-                  const bold = product.description.slice(0, firstDot + 1);
-                  const rest = product.description.slice(firstDot + 2);
-                  return <p><strong>{bold}</strong> {rest}</p>;
+                  return <p><strong>{product.description.slice(0, firstDot + 1)}</strong> {product.description.slice(firstDot + 2)}</p>;
                 })()}
               </div>
             )}
 
-            {/* Bullets from CMS */}
             {product.bullets?.length > 0 && (
               <ul className="animate-in mb-10" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {product.bullets.map((b: any, i: number) => (
@@ -364,7 +497,6 @@ export default function ProductPage() {
               </ul>
             )}
 
-            {/* Add to Cart — uses variantId from CMS if available */}
             <button ref={btnRef} onClick={handleAddToCart} disabled={adding}
               className="animate-in w-full font-black rounded-full flex items-center justify-between transition-all"
               style={{ padding: "20px 32px", fontSize: "1.25rem", letterSpacing: "-0.01em",
@@ -377,8 +509,12 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* Related products — fetched from CMS, excluding "more-cah" */}
-      <RelatedProducts excludeSlug="more-cah" />
+      {/* Related products — each card manages its own cart state */}
+      <RelatedProducts
+        excludeSlug="more-cah"
+        onCartUpdate={updateCart}
+        onCartOpen={() => setCartOpen(true)}
+      />
       <Footer />
     </div>
   );

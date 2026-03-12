@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       { protocol: "http",  hostname: "localhost", port: "3001" },
       { protocol: "https", hostname: "*.vercel.app" },
       { protocol: "https", hostname: "*.onrender.com" },
+      { protocol: "https", hostname: "cardsagainsthumanity-cms.vercel.app" },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,
