@@ -4,59 +4,132 @@ const BuyCards: CollectionConfig = {
   slug: 'buy-cards',
   admin: {
     useAsTitle: 'label',
-    defaultColumns: ['label', 'cta', 'order', 'updatedAt'],
-    description: 'The product cards in the "Buy the game." scroll section. Control colors, labels, and which product they link to.',
+    defaultColumns: ['label', 'tag', 'order', 'updatedAt'],
+    description:
+      'Cards shown in the "Buy the game" section. Controls text, images, colors and links.',
   },
-  access: { read: () => true, create: () => true, update: () => true, delete: () => true },
+
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+
   fields: [
     {
       name: 'label',
       type: 'text',
       required: true,
-      admin: { description: 'Big headline on the card. Use \\n for a line break. E.g. "America\'s #1\\ngerbil coffin."' },
+      admin: {
+        description:
+          'Main headline on the card. Use \\n for line breaks. Example: "Mooooore\\ncards!"',
+      },
     },
+
+    {
+      name: 'tag',
+      type: 'text',
+      admin: {
+        description:
+          'Optional small tag like "Expansion", "New", "Limited", etc.',
+      },
+    },
+
     {
       name: 'cta',
       type: 'text',
       required: true,
-      admin: { description: 'Button text. E.g. "Buy Now"' },
+      defaultValue: 'Buy Now',
+      admin: {
+        description: 'Button text.',
+      },
     },
+
     {
       name: 'href',
       type: 'text',
       defaultValue: '#',
-      admin: { description: 'Link when clicking the card or button. E.g. /products/more-cah' },
+      admin: {
+        description: 'Where the card links to. Example: /products/hot-box',
+      },
     },
+
     {
       name: 'backgroundColor',
       type: 'text',
       required: true,
-      defaultValue: '#87CEEB',
-      admin: { description: 'Card background color as hex. E.g. #87CEEB, #FFE135, #FFB3D9, #90EE90, #111111' },
+      defaultValue: '#FFB3D9',
+      admin: {
+        description: 'Card background color (hex).',
+      },
     },
+
     {
       name: 'darkBackground',
       type: 'checkbox',
       defaultValue: false,
-      admin: { description: 'Check this for dark/black backgrounds — makes the label text and button white instead of black.' },
+      admin: {
+        description:
+          'Enable if the background is dark so text + button become white.',
+      },
     },
+
     {
-      name: 'productImage',
-      type: 'upload',
-      relationTo: 'media',
-      admin: { description: 'Product image shown in the top-right of the card. Upload your product shot here.' },
+      name: 'images',
+      type: 'array',
+      maxRows: 2,
+      admin: {
+        description:
+          'One or two product images floating on the card.',
+      },
+      fields: [
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          required: true,
+        },
+        {
+          name: 'position',
+          type: 'select',
+          options: [
+            { label: 'Top Left', value: 'top-left' },
+            { label: 'Top Right', value: 'top-right' },
+            { label: 'Bottom Left', value: 'bottom-left' },
+            { label: 'Bottom Right', value: 'bottom-right' },
+          ],
+          defaultValue: 'top-right',
+        },
+        {
+          name: 'rotation',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            description: 'Rotate image slightly for style (-20 to 20)',
+          },
+        },
+      ],
     },
+
     {
       name: 'order',
       type: 'number',
       defaultValue: 99,
-      admin: { description: 'Lower numbers appear first (leftmost in the scroll).' },
+      admin: {
+        description:
+          'Lower numbers appear first in the horizontal scroll.',
+      },
     },
+
     {
       name: 'published',
       type: 'checkbox',
       defaultValue: true,
-      admin: { description: 'Uncheck to hide this card without deleting it.' },
+      admin: {
+        description:
+          'Uncheck to hide this card without deleting it.',
+      },
     },
   ],
 }
