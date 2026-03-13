@@ -16,13 +16,13 @@ async function getCMSHome() {
 async function getCMSCollections() {
   try {
     const [faqs, stuffPosts, buyCards, emailPhrases] = await Promise.all([
-      fetch(`${CMS_URL}/api/faqs?where[published][equals]=true&sort=order&limit=50`,             { next: { revalidate: 60 } }),
+      fetch( `${process.env.NEXT_PUBLIC_CMS_URL}/api/faqs` + `?where[published][equals]=true` + `&sort=order` + `&limit=100`, { next: { revalidate: 60 } }),
       fetch(`${CMS_URL}/api/stuff-posts?where[published][equals]=true&sort=order&limit=20&depth=2`, { next: { revalidate: 60 } }),
       fetch(`${CMS_URL}/api/buy-cards?where[published][equals]=true&sort=order&limit=20&depth=2`,   { next: { revalidate: 60 } }),
       fetch(`${CMS_URL}/api/email-phrases?where[published][equals]=true&sort=order&limit=30`,       { next: { revalidate: 60 } }),
     ]);
     return {
-      faqs:         faqs.ok         ? (await faqs.json()).docs         ?? [] : [],
+      faqs:         faqs?.ok        ? (await faqs.json()).docs         ?? [] : [],
       stuffPosts:   stuffPosts.ok   ? (await stuffPosts.json()).docs   ?? [] : [],
       buyCards:     buyCards.ok     ? (await buyCards.json()).docs     ?? [] : [],
       emailPhrases: emailPhrases.ok ? (await emailPhrases.json()).docs ?? [] : [],

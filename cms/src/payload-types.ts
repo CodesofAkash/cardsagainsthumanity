@@ -320,7 +320,7 @@ export interface StuffPost {
   createdAt: string;
 }
 /**
- * The product cards in the "Buy the game." scroll section. Control colors, labels, and which product they link to.
+ * Cards in the "Buy it now" horizontal scroll. Each card has floating product images, headline text and a CTA button.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "buy-cards".
@@ -328,35 +328,60 @@ export interface StuffPost {
 export interface BuyCard {
   id: string;
   /**
-   * Big headline on the card. Use \n for a line break. E.g. "America's #1\ngerbil coffin."
+   * Main headline. Use \n for line breaks. E.g. "For whatever\nyou're into."
    */
   label: string;
   /**
-   * Button text. E.g. "Buy Now"
+   * Button label. E.g. "Buy $5 Packs", "Find Out", "Buy Now"
    */
   cta: string;
   /**
-   * Link when clicking the card or button. E.g. /products/more-cah
+   * Link for the entire card and button. E.g. /products/hot-box
    */
   href?: string | null;
   /**
-   * Card background color as hex. E.g. #87CEEB, #FFE135, #FFB3D9, #90EE90, #111111
+   * Card background color (hex or CSS color). E.g. #FFB3D9, #90EE90, #FF7043
    */
   backgroundColor: string;
   /**
-   * Check this for dark/black backgrounds — makes the label text and button white instead of black.
+   * Check if background is dark — makes text and button white instead of black.
    */
   darkBackground?: boolean | null;
   /**
-   * Product image shown in the top-right of the card. Upload your product shot here.
+   * 1–3 product images floating on the card. Position them independently for a "scattered" look like the reference.
    */
-  productImage?: (string | null) | Media;
+  images?:
+    | {
+        image: string | Media;
+        /**
+         * CSS top value. E.g. "-5%", "10px", "20%". Negative values let image bleed out of card.
+         */
+        top?: string | null;
+        /**
+         * CSS right value. E.g. "0%", "-10px".
+         */
+        right?: string | null;
+        /**
+         * Width of this image relative to card. E.g. "55%", "300px".
+         */
+        width?: string | null;
+        /**
+         * Rotation in degrees (-45 to 45). Negative = tilts left, positive = tilts right.
+         */
+        rotation?: number | null;
+        /**
+         * Stack order when images overlap. Higher = on top.
+         */
+        zIndex?: number | null;
+        id?: string | null;
+      }[]
+    | null;
   /**
-   * Lower numbers appear first (leftmost in the scroll).
+   * Display order — lower numbers appear first in the scroll.
    */
   order?: number | null;
   /**
-   * Uncheck to hide this card without deleting it.
+   * Uncheck to hide without deleting.
    */
   published?: boolean | null;
   updatedAt: string;
@@ -611,7 +636,17 @@ export interface BuyCardsSelect<T extends boolean = true> {
   href?: T;
   backgroundColor?: T;
   darkBackground?: T;
-  productImage?: T;
+  images?:
+    | T
+    | {
+        image?: T;
+        top?: T;
+        right?: T;
+        width?: T;
+        rotation?: T;
+        zIndex?: T;
+        id?: T;
+      };
   order?: T;
   published?: T;
   updatedAt?: T;
