@@ -93,59 +93,98 @@ export default function HeroSection({ quotes, cartCount = 0, onCartOpen = () => 
   const titleRef  = useRef<HTMLDivElement>(null);
   const badgeRef  = useRef<HTMLDivElement>(null);
   const navRef    = useRef<HTMLDivElement>(null);
+  const stageRef  = useRef<HTMLDivElement>(null);
 
-  const setIdxRef   = useRef(0);
-  const quoteIdxRef = useRef(0);
-  const busy  = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setIdxRef    = useRef(0);
+  const quoteIdxRef  = useRef(0);
+  const busy   = useRef(false);
+  const timer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks whether the very first spread has run — keeps stage invisible until GSAP is ready
+  const ready  = useRef(false);
 
-  const [setIdx,   setSetIdx]   = useState(0);
-  const [quoteIdx, setQuoteIdx] = useState(0);
+  const [setIdx,    setSetIdx]   = useState(0);
+  const [quoteIdx,  setQuoteIdx] = useState(0);
   const [shopOpen,  setShopOpen]  = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
   const clearTimer = () => { if (timer.current) clearTimeout(timer.current); };
-  const closeAll = () => { setShopOpen(false); setAboutOpen(false); };
+  const closeAll   = () => { setShopOpen(false); setAboutOpen(false); };
 
   const flyUpNext = useCallback(async () => {
-    clearTimer(); busy.current = true;
+    clearTimer();
+    busy.current = true;
     const gsap = await getGSAP();
     const all = [blackRef.current, ...whiteRefs.current].filter(Boolean) as HTMLDivElement[];
     gsap.to(all, {
-      y: "-130vh", opacity: 0, rotate: (i: number) => (i % 2 ? 18 : -18),
+      y: "-130vh", opacity: 0,
+      rotate: (i: number) => (i % 2 ? 18 : -18),
       duration: 0.55, stagger: 0.045, ease: "power2.in",
       onComplete: () => {
         const ni = (setIdxRef.current + 1) % CARD_SETS.length;
         const nq = (quoteIdxRef.current + 1) % quotes.length;
-        setIdxRef.current = ni; quoteIdxRef.current = nq;
-        setSetIdx(ni); setQuoteIdx(nq); busy.current = false;
+        setIdxRef.current  = ni;
+        quoteIdxRef.current = nq;
+        setSetIdx(ni);
+        setQuoteIdx(nq);
+        busy.current = false;
       },
     });
   }, [quotes.length]);
 
-  // Black card zooms OUT (starts large = close, shrinks = moves away)
   const doSpread = useCallback(async () => {
     if (!blackRef.current) return;
     const gsap = await getGSAP();
     busy.current = true;
-    whiteRefs.current.forEach(el => { if (el) gsap.set(el, { x: 0, y: 0, rotate: 0, scale: 0.6, opacity: 0, zIndex: 1 }); });
-    gsap.set(blackRef.current, { x: 0, y: 0, rotate: 0, scale: 1.8, opacity: 1, zIndex: 20 });
+
+    // ── KEY FIX: hide ALL white cards immediately via GSAP before any paint ──
+    // This prevents the "Cuddling." flash — white cards start invisible at center
+    whiteRefs.current.forEach(el => {
+      if (el) gsap.set(el, { x: 0, y: 0, rotate: 0, scale: 0.8, opacity: 0, zIndex: 1 });
+    });
+
+    // Black card: starts HUGE (fills viewport = "inside the card looking out")
+    // then zooms OUT to resting size — camera pulling back from the card
+    gsap.set(blackRef.current, {
+      x: 0, y: 0, rotate: 0,
+      scale: 4,       // starts at 4x — genuinely fills the screen
+      opacity: 1,
+      zIndex: 20,
+    });
+
+    // Reveal the stage now that GSAP has positioned everything
+    if (!ready.current && stageRef.current) {
+      gsap.set(stageRef.current, { visibility: "visible" });
+      ready.current = true;
+    }
+
+    // Zoom black card OUT — "throwing card onto a table" / camera pulling back
     gsap.to(blackRef.current, {
-      scale: 0.9, rotate: 3, duration: 0.75, ease: "power2.out", delay: 0.1,
+      scale: 1,
+      rotate: -3,
+      duration: 0.9,
+      ease: "power3.out",
+      delay: 0.05,
       onComplete: () => {
+        // White cards fan out from center
         whiteRefs.current.forEach((el, i) => {
           if (!el) return;
           const sp = SPREAD[i];
           gsap.to(el, {
-            x: sp.x, y: sp.y, rotate: sp.rot, scale: 1, opacity: 1, zIndex: 5,
-            duration: 0.5, delay: i * 0.065, ease: "back.out(1.3)",
-            onComplete: i === 5 ? () => { busy.current = false; timer.current = setTimeout(flyUpNext, 4200); } : undefined,
+            x: sp.x, y: sp.y, rotate: sp.rot,
+            scale: 1, opacity: 1, zIndex: 5,
+            duration: 0.5,
+            delay: i * 0.065,
+            ease: "back.out(1.3)",
+            onComplete: i === 5
+              ? () => { busy.current = false; timer.current = setTimeout(flyUpNext, 4200); }
+              : undefined,
           });
         });
       },
     });
   }, [flyUpNext]);
 
+  // Initial UI animations (title, badge, nav)
   useEffect(() => {
     const run = async () => {
       const gsap = await getGSAP();
@@ -156,7 +195,11 @@ export default function HeroSection({ quotes, cartCount = 0, onCartOpen = () => 
     run();
   }, []);
 
-  useEffect(() => { doSpread(); return clearTimer; }, [setIdx]);
+  // Run spread whenever setIdx changes (including initial mount)
+  useEffect(() => {
+    doSpread();
+    return clearTimer;
+  }, [setIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onEnter = async (i: number) => {
     if (busy.current) return;
@@ -170,12 +213,15 @@ export default function HeroSection({ quotes, cartCount = 0, onCartOpen = () => 
     gsap.to(el, { rotate: SPREAD[i].rot, scale: 1, zIndex: 5, duration: 0.2, ease: "power2.out" });
   };
   const onClick = async (i: number) => {
-    if (busy.current) return; clearTimer(); busy.current = true;
+    if (busy.current) return;
+    clearTimer(); busy.current = true;
     const gsap = await getGSAP();
     whiteRefs.current.forEach((el, j) => {
       if (!el) return; const sp = SPREAD[j];
-      if (j === i) gsap.to(el, { x: sp.x * 0.35, y: sp.y * 0.35 - 10, scale: 1.15, rotate: sp.rot * 0.3, zIndex: 28, duration: 0.4, ease: "back.out(1.2)" });
-      else gsap.to(el, { x: sp.x * 1.7, y: sp.y * 1.6, scale: 0.85, opacity: 0.5, duration: 0.4, ease: "power2.out" });
+      if (j === i)
+        gsap.to(el, { x: sp.x * 0.35, y: sp.y * 0.35 - 10, scale: 1.15, rotate: sp.rot * 0.3, zIndex: 28, duration: 0.4, ease: "back.out(1.2)" });
+      else
+        gsap.to(el, { x: sp.x * 1.7, y: sp.y * 1.6, scale: 0.85, opacity: 0.5, duration: 0.4, ease: "power2.out" });
     });
     gsap.to(blackRef.current, { scale: 1.06, duration: 0.4, ease: "back.out(1.2)" });
     timer.current = setTimeout(() => { busy.current = false; flyUpNext(); }, 2200);
@@ -183,23 +229,25 @@ export default function HeroSection({ quotes, cartCount = 0, onCartOpen = () => 
 
   const set = CARD_SETS[setIdx];
   const chevron = (open: boolean) => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ marginTop: 2, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"
+      style={{ marginTop: 2, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
       <path d="M7 10l5 5 5-5z" />
     </svg>
   );
-  const btnCls = "text-white font-black flex items-center gap-1 bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity";
+  const btnCls  = "text-white font-black flex items-center gap-1 bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity";
   const btnStyle: React.CSSProperties = { fontSize: "clamp(1.1rem,1.5vw,1.4rem)", fontFamily: "inherit" };
 
   return (
     <>
-      {/* Mega-menu backdrop — above hero, below menus */}
       {(shopOpen || aboutOpen) && <MenuBackdrop onClose={closeAll} />}
       {shopOpen  && <ShopMegaMenu  onClose={closeAll} />}
       {aboutOpen && <AboutMegaMenu onClose={closeAll} cmsHome={cmsHome} />}
 
       <section className="relative w-full bg-black overflow-hidden" style={{ height: "100svh", minHeight: 620 }}>
-        {/* Title — top left */}
+
+        {/* Title — always visible, fades in via GSAP */}
         <div ref={titleRef} className="absolute top-12 left-12 z-30" style={{ opacity: 0 }}>
+          {/* Cards Against Humanity SVG wordmark */}
           <svg xmlns="http://www.w3.org/2000/svg" width="280" height="175" viewBox="0 0 280 175" fill="none">
             <path fillRule="evenodd" clipRule="evenodd" d="M12.8102 116.124V133.9H30.8683V116.124H40.6804V162.445H30.8683V142.463H12.8102V162.445H3V116.124H12.8102ZM68.362 162.445V157.773H68.1729C67.0497 159.72 65.5896 161.126 63.799 161.992C62.0087 162.856 60.1749 163.289 58.3 163.289C55.927 163.289 53.9793 162.964 52.4584 162.314C50.9372 161.667 49.7392 160.748 48.8656 159.559C47.9901 158.37 47.3761 156.92 47.0221 155.212C46.6678 153.504 46.4907 151.611 46.4907 149.535V128.906H55.3643V147.848C55.3643 150.616 55.7794 152.681 56.6138 154.043C57.446 155.406 58.9257 156.088 61.0505 156.088C63.4668 156.088 65.216 155.341 66.2999 153.849C67.3822 152.356 67.9233 149.903 67.9233 146.485V128.906H76.7969V162.445H68.362ZM90.9169 128.905V133.446H91.0429C92.2078 131.716 93.6145 130.376 95.2614 129.424C96.9064 128.472 98.7911 127.996 100.916 127.996C102.956 127.996 104.822 128.407 106.508 129.228C108.196 130.051 109.477 131.5 110.35 133.575C111.308 132.106 112.611 130.807 114.256 129.684C115.901 128.558 117.849 127.996 120.1 127.996C121.807 127.996 123.389 128.213 124.847 128.644C126.305 129.077 127.555 129.769 128.597 130.721C129.638 131.673 130.451 132.917 131.035 134.451C131.618 135.988 131.909 137.836 131.909 139.997V162.445H123.035V143.437C123.035 142.312 122.994 141.254 122.911 140.257C122.827 139.264 122.598 138.398 122.224 137.663C121.849 136.927 121.296 136.343 120.568 135.91C119.838 135.479 118.85 135.262 117.599 135.262C116.349 135.262 115.34 135.512 114.569 136.008C113.798 136.506 113.193 137.154 112.757 137.955C112.32 138.755 112.027 139.664 111.881 140.68C111.736 141.697 111.663 142.722 111.663 143.76V162.445H102.789V143.631C102.789 142.637 102.77 141.652 102.728 140.68C102.685 139.705 102.51 138.808 102.197 137.987C101.884 137.166 101.363 136.506 100.635 136.008C99.9048 135.512 98.8326 135.262 97.4159 135.262C96.9988 135.262 96.4479 135.36 95.7611 135.554C95.0726 135.749 94.4054 136.116 93.7601 136.658C93.1148 137.199 92.5619 137.977 92.1056 138.992C91.6449 140.01 91.4169 141.339 91.4169 142.982V162.445H82.545V128.905H90.9169ZM138.845 133.835C139.762 132.409 140.928 131.263 142.345 130.397C143.76 129.533 145.353 128.916 147.124 128.548C148.895 128.18 150.676 127.996 152.468 127.996C154.091 127.996 155.736 128.115 157.405 128.354C159.069 128.591 160.59 129.057 161.965 129.747C163.341 130.44 164.464 131.402 165.34 132.635C166.215 133.867 166.652 135.501 166.652 137.532V154.985C166.652 156.498 166.735 157.947 166.902 159.33C167.067 160.715 167.36 161.753 167.777 162.445H158.778C158.611 161.926 158.475 161.397 158.373 160.856C158.268 160.314 158.194 159.763 158.154 159.201C156.738 160.715 155.071 161.775 153.155 162.379C151.238 162.984 149.281 163.289 147.282 163.289C145.739 163.289 144.303 163.095 142.969 162.704C141.635 162.314 140.47 161.71 139.47 160.888C138.471 160.067 137.69 159.03 137.127 157.773C136.564 156.519 136.283 155.028 136.283 153.297C136.283 151.394 136.606 149.827 137.251 148.593C137.896 147.361 138.731 146.379 139.752 145.641C140.771 144.908 141.938 144.356 143.25 143.987C144.562 143.621 145.885 143.329 147.218 143.112C148.551 142.896 149.863 142.722 151.156 142.594C152.446 142.463 153.591 142.269 154.591 142.009C155.592 141.75 156.381 141.372 156.966 140.874C157.548 140.377 157.82 139.652 157.778 138.7C157.778 137.705 157.623 136.917 157.31 136.333C156.997 135.749 156.58 135.295 156.061 134.97C155.539 134.645 154.935 134.429 154.249 134.321C153.56 134.214 152.82 134.159 152.029 134.159C150.28 134.159 148.905 134.549 147.905 135.328C146.906 136.106 146.321 137.403 146.156 139.219H137.283C137.408 137.058 137.928 135.262 138.845 133.835V133.835ZM156.374 146.842C155.811 147.037 155.207 147.2 154.562 147.329C153.915 147.459 153.238 147.568 152.529 147.653C151.821 147.741 151.113 147.848 150.406 147.978C149.739 148.107 149.082 148.281 148.437 148.497C147.791 148.714 147.229 149.006 146.751 149.371C146.271 149.741 145.885 150.205 145.594 150.767C145.303 151.33 145.157 152.043 145.157 152.907C145.157 153.73 145.303 154.423 145.594 154.985C145.885 155.547 146.28 155.99 146.78 156.315C147.282 156.637 147.864 156.866 148.531 156.995C149.196 157.126 149.885 157.189 150.593 157.189C152.342 157.189 153.696 156.889 154.654 156.282C155.613 155.677 156.321 154.952 156.779 154.108C157.238 153.265 157.519 152.411 157.623 151.545C157.726 150.681 157.779 149.988 157.779 149.469V146.032C157.405 146.379 156.935 146.648 156.374 146.842V146.842ZM181.335 128.905V133.575H181.522C182.647 131.628 184.105 130.213 185.896 129.326C187.686 128.44 189.52 127.996 191.395 127.996C193.77 127.996 195.716 128.331 197.239 129.001C198.758 129.674 199.956 130.603 200.832 131.792C201.705 132.981 202.319 134.429 202.675 136.139C203.027 137.846 203.206 139.738 203.206 141.815V162.445H194.333V143.501C194.333 140.735 193.916 138.668 193.083 137.305C192.249 135.943 190.771 135.262 188.646 135.262C186.23 135.262 184.479 136.008 183.397 137.501C182.313 138.992 181.772 141.448 181.772 144.863V162.445H172.898V128.905H181.335ZM208.955 123.715H217.829V116.124H208.955V123.715ZM208.953 162.445H217.827V128.906H208.953V162.445ZM243.197 128.905V135.068H236.698V151.676C236.698 153.232 236.948 154.27 237.448 154.789C237.948 155.308 238.947 155.567 240.446 155.567C240.946 155.567 241.426 155.547 241.885 155.504C242.343 155.461 242.78 155.396 243.197 155.308V162.445C242.447 162.574 241.613 162.661 240.696 162.704C239.78 162.747 238.884 162.77 238.01 162.77C236.635 162.77 235.333 162.672 234.105 162.478C232.875 162.284 231.793 161.904 230.855 161.342C229.918 160.78 229.178 159.979 228.637 158.942C228.096 157.904 227.825 156.541 227.825 154.854V135.068H222.451V128.905H227.825V118.849H236.698V128.905H243.197ZM262.505 172.436C260.797 173.603 258.422 174.187 255.38 174.187C254.463 174.187 253.558 174.154 252.663 174.091C251.766 174.025 250.861 173.95 249.944 173.864V166.273C250.778 166.359 251.632 166.445 252.508 166.533C253.381 166.619 254.257 166.639 255.131 166.598C256.297 166.467 257.163 165.991 257.724 165.17C258.287 164.347 258.568 163.44 258.568 162.445C258.568 161.71 258.444 161.018 258.194 160.37L246.882 128.906H256.319L263.63 151.87H263.754L270.816 128.906H280L266.505 166.598C265.545 169.321 264.213 171.268 262.505 172.436V172.436Z" fill="white"/>
             <path fillRule="evenodd" clipRule="evenodd" d="M27.3589 86.0403L21.7631 69.3043H21.6379L15.8562 86.0403H27.3589ZM26.7998 58.0625L43.4029 103.669H33.2667L29.909 93.5138H13.3059L9.82465 103.669H0L16.789 58.0625H26.7998ZM63.3621 95.1112C64.3156 94.6004 65.1047 93.9187 65.7254 93.0657C66.3478 92.2151 66.814 91.2456 67.1251 90.1593C67.4365 89.0753 67.5911 87.9349 67.5911 86.7421C67.5911 85.3806 67.466 84.0913 67.2171 82.8785C66.9685 81.6656 66.5554 80.5896 65.974 79.6525C65.3945 78.7171 64.6269 77.9709 63.6734 77.4178C62.7199 76.8649 61.5178 76.5872 60.0671 76.5872C58.8237 76.5872 57.7567 76.8426 56.8659 77.3534C55.973 77.8644 55.2268 78.5562 54.6259 79.4292C54.025 80.3019 53.5902 81.3037 53.3201 82.4321C53.05 83.5602 52.9168 84.741 52.9168 85.9759C52.9168 87.1687 53.0302 88.3512 53.2593 89.5219C53.4865 90.6924 53.88 91.7464 54.44 92.6835C54.9999 93.6209 55.7341 94.3871 56.6466 94.9824C57.5589 95.5799 58.6983 95.8774 60.0671 95.8774C61.3102 95.8774 62.4086 95.622 63.3621 95.1112V95.1112ZM75.4574 106.096C75.1031 107.8 74.3473 109.387 73.1864 110.855C72.0252 112.326 70.3473 113.571 68.1505 114.592C65.9519 115.614 63.0089 116.125 59.3203 116.125C57.7441 116.125 56.1387 115.924 54.502 115.52C52.8632 115.113 51.3712 114.486 50.0241 113.635C48.6773 112.782 47.5572 111.686 46.6664 110.345C45.7753 109.003 45.2683 107.396 45.1432 105.522H53.9106C54.3237 107.225 55.1325 108.408 56.3366 109.067C57.5368 109.727 58.9268 110.057 60.501 110.057C62.9896 110.057 64.8025 109.291 65.9421 107.758C67.0816 106.225 67.6317 104.286 67.5905 101.945V97.6008H67.4653C66.5118 99.3487 65.155 100.636 63.3929 101.467C61.6306 102.297 59.7766 102.712 57.8283 102.712C55.4241 102.712 53.3507 102.275 51.6101 101.402C49.8694 100.53 48.4382 99.3367 47.3203 97.8261C46.2004 96.3137 45.382 94.5457 44.8631 92.5243C44.3444 90.5009 44.086 88.3609 44.086 86.1044C44.086 83.9742 44.3853 81.9207 44.9885 79.9397C45.5875 77.9586 46.4685 76.2149 47.6296 74.7023C48.7908 73.1897 50.2318 71.9871 51.9526 71.0921C53.6718 70.199 55.6512 69.7504 57.891 69.7504C60.0035 69.7504 61.8597 70.1567 63.4554 70.9652C65.0511 71.7738 66.3884 73.1375 67.4653 75.0522H67.5905V70.6457H75.9842V101.561C75.9842 102.883 75.808 104.393 75.4574 106.096V106.096ZM83.0114 75.5008C83.9219 74.0947 85.0831 72.9666 86.4926 72.1157C87.9023 71.263 89.4882 70.6575 91.2503 70.2935C93.0126 69.9336 94.7845 69.7504 96.5661 69.7504C98.1832 69.7504 99.8201 69.8692 101.479 70.1025C103.137 70.3379 104.65 70.7963 106.019 71.4763C107.387 72.158 108.505 73.1055 109.377 74.3181C110.246 75.5329 110.682 77.14 110.682 79.1414V96.3238C110.682 97.8161 110.765 99.2422 110.931 100.604C111.096 101.967 111.388 102.989 111.8 103.669H102.847C102.681 103.158 102.545 102.637 102.444 102.104C102.34 101.573 102.266 101.03 102.226 100.477C100.815 101.967 99.1565 103.009 97.2514 103.607C95.3444 104.202 93.3962 104.5 91.405 104.5C89.872 104.5 88.4408 104.309 87.1152 103.926C85.7877 103.542 84.6287 102.947 83.634 102.136C82.6376 101.328 81.8602 100.306 81.3022 99.0713C80.7423 97.8361 80.4622 96.3679 80.4622 94.6623C80.4622 92.79 80.7833 91.2453 81.4257 90.0324C82.0676 88.8196 82.8959 87.8501 83.9122 87.126C84.9281 86.4019 86.0893 85.859 87.3953 85.4969C88.7011 85.1349 90.017 84.8472 91.3443 84.6342C92.6698 84.4229 93.9757 84.2519 95.2622 84.1231C96.5466 83.9965 97.686 83.8033 98.6805 83.5479C99.6752 83.2927 100.462 82.9205 101.044 82.4318C101.623 81.941 101.894 81.229 101.852 80.2916C101.852 79.3123 101.698 78.5338 101.387 77.9586C101.075 77.3854 100.66 76.937 100.143 76.6192C99.6245 76.2991 99.0233 76.0861 98.3399 75.9793C97.6548 75.873 96.9184 75.8206 96.1315 75.8206C94.3907 75.8206 93.0222 76.2026 92.0277 76.9691C91.0329 77.7353 90.4515 79.0145 90.2871 80.8026H81.4569C81.5821 78.6727 82.0991 76.9047 83.0114 75.5008V75.5008ZM100.453 88.3066C99.8948 88.4998 99.2917 88.6587 98.6495 88.7873C98.0073 88.9141 97.3337 89.0209 96.6291 89.1051C95.9242 89.1918 95.2193 89.2984 94.5144 89.4249C93.8508 89.5538 93.1986 89.7247 92.5567 89.936C91.9125 90.149 91.3545 90.4368 90.8768 90.7987C90.4008 91.1609 90.0172 91.6193 89.7274 92.1725C89.4375 92.7256 89.2926 93.4294 89.2926 94.2803C89.2926 95.0889 89.4375 95.7706 89.7274 96.3238C90.0172 96.879 90.4106 97.3133 90.908 97.6332C91.4053 97.953 91.9867 98.176 92.6506 98.3049C93.3123 98.4317 93.9957 98.4959 94.7023 98.4959C96.4431 98.4959 97.7902 98.1983 98.7435 97.6008C99.6972 97.0055 100.402 96.2915 100.858 95.4609C101.314 94.6322 101.592 93.7916 101.698 92.9387C101.8 92.088 101.853 91.4062 101.853 90.8954V87.5083C101.479 87.8502 101.013 88.1156 100.453 88.3066V88.3066ZM117.147 65.5365H125.977V58.0627H117.147V65.5365ZM117.147 103.669H125.977V70.6458H117.147V103.669ZM140.715 70.6457V75.2454H140.901C142.02 73.3285 143.471 71.9347 145.253 71.0617C147.035 70.189 148.859 69.7504 150.725 69.7504C153.089 69.7504 155.025 70.0825 156.54 70.7419C158.052 71.4019 159.244 72.3169 160.116 73.4874C160.985 74.6602 161.596 76.0861 161.95 77.7676C162.3 79.4509 162.479 81.3134 162.479 83.3569V103.669H153.648V85.0181C153.648 82.2929 153.233 80.2595 152.405 78.9178C151.575 77.5764 150.103 76.9047 147.99 76.9047C145.584 76.9047 143.843 77.6408 142.766 79.109C141.688 80.5793 141.149 82.995 141.149 86.3598V103.669H132.319V70.6457H140.715ZM175.38 95.4608C175.774 96.1649 176.283 96.7401 176.903 97.1867C177.526 97.6331 178.241 97.9649 179.049 98.176C179.858 98.3893 180.696 98.4958 181.567 98.4958C182.19 98.4958 182.842 98.4216 183.527 98.2727C184.21 98.1239 184.831 97.8885 185.391 97.5687C185.951 97.2509 186.417 96.8245 186.791 96.2914C187.163 95.7606 187.351 95.0889 187.351 94.2803C187.351 92.9186 186.47 91.8949 184.707 91.213C182.945 90.5332 180.488 89.8515 177.34 89.1695C176.053 88.872 174.799 88.5218 173.577 88.1155C172.353 87.7113 171.266 87.1804 170.313 86.5187C169.357 85.859 168.592 85.0282 168.012 84.0286C167.431 83.027 167.141 81.8022 167.141 80.354C167.141 78.226 167.544 76.4803 168.353 75.1166C169.162 73.7549 170.229 72.6789 171.556 71.8904C172.882 71.1041 174.374 70.5489 176.034 70.2311C177.69 69.9113 179.392 69.7504 181.133 69.7504C182.873 69.7504 184.563 69.9213 186.199 70.2634C187.836 70.6033 189.299 71.1785 190.583 71.9871C191.868 72.7957 192.937 73.8717 193.786 75.2131C194.634 76.5548 195.143 78.2461 195.31 80.2916H186.914C186.791 78.5459 186.146 77.3631 184.988 76.7458C183.827 76.1284 182.458 75.8206 180.884 75.8206C180.386 75.8206 179.846 75.8507 179.266 75.9151C178.685 75.9793 178.156 76.1182 177.681 76.3314C177.205 76.5447 176.8 76.8523 176.469 77.2568C176.136 77.6628 175.971 78.206 175.971 78.8857C175.971 79.6943 176.261 80.354 176.841 80.867C177.422 81.3776 178.178 81.7921 179.112 82.112C180.044 82.4318 181.111 82.7193 182.313 82.9749C183.515 83.2301 184.739 83.5078 185.982 83.8033C187.267 84.103 188.521 84.465 189.743 84.8896C190.967 85.3159 192.054 85.8811 193.009 86.5831C193.963 87.2849 194.728 88.1579 195.31 89.2018C195.889 90.2455 196.179 91.5328 196.179 93.0654C196.179 95.2375 195.754 97.0576 194.904 98.5281C194.054 99.9964 192.946 101.179 191.578 102.074C190.211 102.967 188.645 103.597 186.885 103.957C185.121 104.319 183.329 104.5 181.504 104.5C179.641 104.5 177.816 104.309 176.034 103.926C174.25 103.542 172.664 102.903 171.276 102.01C169.886 101.115 168.746 99.934 167.856 98.4637C166.965 96.9955 166.477 95.153 166.395 92.9386H174.789C174.789 93.9184 174.986 94.759 175.38 95.4608V95.4608ZM219.001 70.6459V76.7139H212.534V93.0657C212.534 94.6003 212.783 95.622 213.28 96.133C213.777 96.6438 214.772 96.8992 216.264 96.8992C216.761 96.8992 217.237 96.8792 217.695 96.8348C218.149 96.7924 218.586 96.7303 219.001 96.6438V103.669C218.255 103.798 217.425 103.883 216.512 103.927C215.6 103.967 214.709 103.989 213.84 103.989C212.471 103.989 211.175 103.894 209.954 103.701C208.73 103.51 207.653 103.138 206.719 102.585C205.787 102.032 205.051 101.244 204.513 100.22C203.972 99.1981 203.704 97.8567 203.704 96.1972V76.7139H198.357V70.6459H203.704V60.7441H212.534V70.6459H219.001Z" fill="white"/>
@@ -222,37 +270,39 @@ export default function HeroSection({ quotes, cartCount = 0, onCartOpen = () => 
             onClick={() => { setAboutOpen(o => !o); setShopOpen(false); }}>
             About {chevron(aboutOpen)}
           </button>
-          {/* Cart — opens CartDrawer via onCartOpen prop */}
           <button
-            className="relative flex items-center hover:opacity-70 transition-opacity"
+            className="relative flex items-center hover:opacity-70 transition-opacity bg-transparent border-none cursor-pointer text-white gap-2"
             aria-label="Open cart"
             onClick={() => { closeAll(); onCartOpen(); }}
           >
             <CartIcon />
-
-            <span
-              className="absolute font-extrabold"
-              style={{
-                fontSize: "20px",
-                top: "-6px",
-                right: "20px",
-              }}
-            >
-              {cartCount}
-            </span>
+            <span className="font-black" style={{ fontSize: "1.2rem" }}>\{cartCount}/</span>
           </button>
         </div>
 
-        {/* Cards stage */}
-        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 10 }}>
+        {/*
+          Cards stage — starts INVISIBLE via CSS (visibility:hidden).
+          GSAP sets all card positions synchronously BEFORE making it visible.
+          This is the key fix: no white card ever flashes before GSAP runs.
+        */}
+        <div
+          ref={stageRef}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ zIndex: 10, visibility: "hidden" }}
+        >
           <div ref={blackRef} className="absolute" style={{ width: "clamp(240px,22vw,320px)", height: "clamp(310px,28vw,415px)" }}>
             <PlayingCard text={set.black} black />
           </div>
           {set.whites.map((text, i) => (
-            <div key={`${setIdx}-${i}`} ref={el => { whiteRefs.current[i] = el; }}
+            <div
+              key={`${setIdx}-${i}`}
+              ref={el => { whiteRefs.current[i] = el; }}
               className="absolute cursor-pointer"
               style={{ width: "clamp(200px,19vw,290px)", height: "clamp(260px,24vw,370px)" }}
-              onMouseEnter={() => onEnter(i)} onMouseLeave={() => onLeave(i)} onClick={() => onClick(i)}>
+              onMouseEnter={() => onEnter(i)}
+              onMouseLeave={() => onLeave(i)}
+              onClick={() => onClick(i)}
+            >
               <PlayingCard text={text} />
             </div>
           ))}
