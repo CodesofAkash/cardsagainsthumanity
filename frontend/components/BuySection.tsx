@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -19,171 +19,175 @@ type BuyCard = {
   href?: string;
   backgroundColor: string;
   darkBackground?: boolean;
-  // legacy single image (backwards compat)
   productImage?: { url?: string } | null;
-  // new multi-image array
   images?: ImageEntry[];
+  order?: number;
+  published?: boolean;
 };
 
-/* ─── Fallback cards (matching the reference style) ─────────────────── */
+/* ─── Fallback cards ─────────────────────────────────────────────────── */
 const FALLBACK_CARDS: BuyCard[] = [
   {
     label: "America's #1\ngerbil coffin.",
     cta: "Buy Now",
     href: "/products/more-cah",
-    backgroundColor: "#f472b6", // hot pink
-    darkBackground: false,
-    images: [
-      { top: "-8%", right: "2%",  width: "52%", rotation: -12, zIndex: 2 },
-    ],
-  },
-  {
-    label: "For whatever\nyou're into.",
-    cta: "Buy $5 Packs",
-    href: "#",
-    backgroundColor: "#86efac", // lime green
-    darkBackground: false,
-    images: [
-      { top: "-12%", right: "28%", width: "42%", rotation: -18, zIndex: 3 },
-      { top: "8%",   right: "-2%", width: "48%", rotation: 10,  zIndex: 2 },
-    ],
-  },
-  {
-    label: "What is\nstuff?",
-    cta: "Find Out",
-    href: "#",
-    backgroundColor: "#fb923c", // orange
-    darkBackground: false,
-    images: [
-      { top: "-5%", right: "-4%", width: "58%", rotation: 8, zIndex: 2 },
-    ],
+    backgroundColor: "#f472b6",
+    order: 1,
   },
   {
     label: "Play CAH\nwith your kids.",
     cta: "Buy Family Edition",
     href: "#",
-    backgroundColor: "#fde047", // yellow
-    darkBackground: false,
-    images: [
-      { top: "-6%", right: "0%", width: "54%", rotation: -10, zIndex: 2 },
-    ],
+    backgroundColor: "#fde047",
+    order: 2,
   },
   {
-    label: "Mooooore\ncards!",
+    label: "Moooooore\ncards!",
     cta: "Buy Expansions",
     href: "#",
-    backgroundColor: "#818cf8", // purple-ish
-    darkBackground: false,
-    images: [
-      { top: "-10%", right: "15%", width: "38%", rotation: -20, zIndex: 3 },
-      { top: "5%",   right: "-3%", width: "44%", rotation: 12,  zIndex: 2 },
-    ],
+    backgroundColor: "#818cf8",
+    order: 3,
   },
   {
-    label: "The game\nthat started it.",
-    cta: "Buy Original",
+    label: "For whatever\nyou're into.",
+    cta: "Buy $5 Packs",
     href: "#",
-    backgroundColor: "#111111",
-    darkBackground: true,
-    images: [
-      { top: "-8%", right: "0%", width: "56%", rotation: -8, zIndex: 2 },
-    ],
+    backgroundColor: "#86efac",
+    order: 4,
   },
+  {
+    label: "What is\nthis stuff?",
+    cta: "Find Out",
+    href: "#",
+    backgroundColor: "#fb923c",
+    order: 5,
+  },
+];
+
+/* ─── Fix literal "\n" strings from CMS ─────────────────────────────── */
+// Payload stores "America's #1\ngerbil coffin." as a literal backslash-n.
+// This converts it to an actual newline so whiteSpace:"pre-line" renders correctly.
+function fixNewlines(str: string): string {
+  return str.replace(/\\n/g, "\n");
+}
+
+/* ─── Image position defaults by index ──────────────────────────────── */
+// When no explicit position is set in CMS, use sensible defaults per image slot
+const IMAGE_DEFAULTS = [
+  { top: "-10%", right: "0%",   width: "60%", rotation: -12 },
+  { top: "5%",   right: "-3%",  width: "52%", rotation:  10 },
+  { top: "-5%",  right: "20%",  width: "40%", rotation: -18 },
 ];
 
 /* ─── Single card ────────────────────────────────────────────────────── */
 function BuyCard({ card }: { card: BuyCard }) {
-  const fg = card.darkBackground ? "#fff" : "#000";
-  const bg = card.darkBackground ? "#fff" : "#000";
-  const fgBtn = card.darkBackground ? "#000" : "#fff";
+  const fg    = card.darkBackground ? "#fff" : "#000";
+  const btnBg = card.darkBackground ? "#fff" : "#000";
+  const btnFg = card.darkBackground ? "#000" : "#fff";
 
-  // Resolve image list — support both legacy single image and new array
+  // Build image list — new array OR legacy single image
   const imageList: ImageEntry[] = card.images?.length
     ? card.images
     : card.productImage?.url
-      ? [{ image: card.productImage, top: "-8%", right: "0%", width: "56%", rotation: -10, zIndex: 2 }]
+      ? [{ image: card.productImage }]
       : [];
+
+  const label = fixNewlines(card.label ?? "");
 
   return (
     <a
       href={card.href || "#"}
-      className="group relative flex-shrink-0 block overflow-visible"
+      className="group relative flex-shrink-0 block"
       style={{
-        width: "clamp(520px, 42vw, 780px)",
-        height: "clamp(420px, 34vw, 640px)",
+        width:        "clamp(480px, 40vw, 740px)",
+        height:       "clamp(380px, 30vw, 560px)",
         borderRadius: 24,
-        background: card.backgroundColor,
+        background:   card.backgroundColor || "#eee",
         textDecoration: "none",
-        // overflow visible so images can bleed above card top
+        // overflow visible so images bleed above card top edge
+        overflow: "visible",
       }}
     >
       {/* ── Floating product images ── */}
       {imageList.map((entry, idx) => {
         const src = entry.image?.url;
         if (!src) return null;
+        const def = IMAGE_DEFAULTS[idx] ?? IMAGE_DEFAULTS[0];
         return (
           <div
             key={idx}
             className="absolute pointer-events-none"
             style={{
-              top: entry.top ?? "-8%",
-              right: entry.right ?? "0%",
-              width: entry.width ?? "62%",
-              zIndex: entry.zIndex ?? 2,
-              transform: `rotate(${entry.rotation ?? -10}deg)`,
-              transition: "transform 0.4s cubic-bezier(0.34,1.56,0.64,1)",
+              top:       entry.top      ?? def.top,
+              right:     entry.right    ?? def.right,
+              width:     entry.width    ?? def.width,
+              zIndex:    entry.zIndex   ?? (3 - idx), // first image on top
+              transform: `rotate(${entry.rotation ?? def.rotation}deg)`,
             }}
           >
             <Image
               src={src}
-              alt={card.label}
+              alt={label}
               width={600}
               height={600}
               style={{
-                width: "100%",
-                height: "auto",
-                objectFit: "contain",
-                filter: "drop-shadow(0 28px 60px rgba(0,0,0,0.45))",
-                // Subtle lift on card hover — group-hover targets parent <a>
+                width:       "100%",
+                height:      "auto",
+                objectFit:   "contain",
+                filter:      "drop-shadow(0 24px 52px rgba(0,0,0,0.42))",
+                transition:  "transform 0.6s cubic-bezier(0.34,1.56,0.64,1)",
               }}
-              className="group-hover:scale-110 transition-transform duration-700"
+              className="group-hover:scale-110"
             />
           </div>
         );
       })}
 
-      {/* ── Text + CTA — bottom left ── */}
+      {/* ── Rounded clipping mask for card body ──
+          The outer <a> is overflow:visible for images.
+          This inner div clips the coloured card background to rounded rect
+          so the card itself still has rounded corners.
+      ── */}
+      <div
+        className="absolute inset-0 rounded-3xl"
+        style={{ background: card.backgroundColor || "#eee", zIndex: 0 }}
+      />
+
+      {/* ── Text + CTA — bottom left, above background div ── */}
       <div
         className="absolute bottom-0 left-0 z-10"
-        style={{ padding: "clamp(28px,4vw,48px)", maxWidth: imageList.length ? "55%" : "85%" }}
+        style={{
+          padding:  "clamp(24px,3.5vw,44px)",
+          maxWidth: imageList.length ? "52%" : "88%",
+        }}
       >
         <p
           className="font-black"
           style={{
-            fontSize: "clamp(2.2rem,3.6vw,3.6rem)",
-            color: fg,
+            fontSize:    "clamp(2rem,3.4vw,3.4rem)",
+            color:       fg,
             letterSpacing: "-0.03em",
-            lineHeight: 1.08,
-            whiteSpace: "pre-line",
-            marginBottom: "clamp(16px,2vw,28px)",
-            fontFamily: "Helvetica Neue, Arial Black, sans-serif",
+            lineHeight:  1.08,
+            whiteSpace:  "pre-line",    // renders actual \n as line break
+            marginBottom: "clamp(14px,1.8vw,26px)",
+            fontFamily:  "Helvetica Neue, Arial Black, sans-serif",
           }}
         >
-          {card.label}
+          {label}
         </p>
 
         <span
-          className="inline-block font-black transition-opacity duration-200 group-hover:opacity-80"
+          className="inline-block font-black"
           style={{
-            background: bg,
-            color: fgBtn,
-            padding: "clamp(10px,1.2vw,16px) clamp(20px,2.2vw,32px)",
-            borderRadius: 9999,
-            fontSize: "clamp(14px,1.2vw,17px)",
+            background:    btnBg,
+            color:         btnFg,
+            padding:       "clamp(10px,1.1vw,15px) clamp(20px,2vw,30px)",
+            borderRadius:  9999,
+            fontSize:      "clamp(13px,1.1vw,16px)",
             letterSpacing: "-0.01em",
-            fontFamily: "Helvetica Neue, Arial Black, sans-serif",
-            fontWeight: 900,
-            whiteSpace: "nowrap",
+            fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
+            fontWeight:    900,
+            whiteSpace:    "nowrap",
           }}
         >
           {card.cta}
@@ -203,57 +207,60 @@ export default function BuySection({
 }) {
   const trackRef  = useRef<HTMLDivElement>(null);
   const animRef   = useRef<number | null>(null);
-  const posRef    = useRef(0);           // current x offset in px (negative = scrolled right)
-  const speedRef  = useRef(0.35);         // px per frame
+  const posRef    = useRef(0);
   const pausedRef = useRef(false);
+  const SPEED     = 0.38; // px per frame
 
-  const cards: BuyCard[] = buyCards?.length ? buyCards : FALLBACK_CARDS;
+  // Sort by order asc, filter published, fall back to FALLBACK_CARDS
+  const raw = buyCards?.length ? buyCards : FALLBACK_CARDS;
+  const cards = raw
+    .filter(c => c.published !== false)
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 
-  // ── Pure rAF scroll (no GSAP needed — avoids reset flash) ────────────
+  /* ── RAF infinite scroll — no GSAP to avoid reset flicker ── */
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
 
-    // Wait one frame so the DOM has measured
-    const raf = requestAnimationFrame(() => {
-      const singleWidth = track.scrollWidth / 2; // half = one set of cards
+    let singleWidth = 0;
+
+    // Measure after paint
+    const setup = requestAnimationFrame(() => {
+      singleWidth = track.scrollWidth / 2;
 
       const tick = () => {
         if (!pausedRef.current) {
-          posRef.current -= speedRef.current;
-          // Seamless loop: when we've scrolled exactly one full set, jump back
+          posRef.current -= SPEED;
           if (Math.abs(posRef.current) >= singleWidth) {
-            posRef.current += singleWidth;
+            posRef.current += singleWidth; // seamless jump
           }
           track.style.transform = `translateX(${posRef.current}px)`;
         }
         animRef.current = requestAnimationFrame(tick);
       };
-
       animRef.current = requestAnimationFrame(tick);
     });
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(setup);
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [cards.length]);
-
-  // Pause on hover
-  const pause  = () => { pausedRef.current = true; };
-  const resume = () => { pausedRef.current = false; };
+  }, [cards.length]); // re-init if card count changes
 
   return (
-    <section className="bg-black py-24" style={{ overflow: "hidden" }}>
-      {/* ── Heading ── */}
-      <div style={{ paddingLeft: "clamp(32px,6vw,80px)", marginBottom: "clamp(32px,4vw,56px)" }}>
+    <section
+      className="bg-black py-20"
+      style={{ overflow: "hidden" }}
+    >
+      {/* Heading */}
+      <div style={{ paddingLeft: "clamp(32px,6vw,80px)", marginBottom: "clamp(28px,3.5vw,52px)" }}>
         <h2
           className="text-white font-black"
           style={{
-            fontSize: "clamp(2.4rem,5vw,4.2rem)",
+            fontSize:      "clamp(2.2rem,4.5vw,4rem)",
             letterSpacing: "-0.035em",
-            lineHeight: 1,
-            fontFamily: "Helvetica Neue, Arial Black, sans-serif",
+            lineHeight:    1,
+            fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
           }}
         >
           {heading || "Buy it now"}
@@ -261,33 +268,28 @@ export default function BuySection({
       </div>
 
       {/*
-        ── Carousel track ──
-        Cards have overflow:visible so images bleed above card top.
-        The outer section clips via overflow:hidden (set above).
-        Extra top padding lets the bleeding images show.
+        Wrapper: overflow visible so card images bleed upward,
+        but the parent <section> clips everything via overflow:hidden.
+        paddingTop gives the images room above the card tops.
       */}
       <div
-        style={{
-          paddingTop: "clamp(40px, 6vw, 80px)", // room for images bleeding above cards
-          paddingBottom: "8px",
-          overflow: "visible",
-        }}
-        onMouseEnter={pause}
-        onMouseLeave={resume}
+        style={{ paddingTop: "clamp(36px,5.5vw,72px)", overflow: "visible" }}
+        onMouseEnter={() => { pausedRef.current = true;  }}
+        onMouseLeave={() => { pausedRef.current = false; }}
       >
         <div
           ref={trackRef}
           className="flex"
           style={{
-            width: "max-content",
-            gap: "clamp(16px,2vw,28px)",
+            width:       "max-content",
+            gap:         "clamp(14px,1.8vw,24px)",
             paddingLeft: "clamp(32px,6vw,80px)",
-            willChange: "transform",
+            willChange:  "transform",
           }}
         >
-          {/* Duplicate for seamless loop */}
+          {/* Duplicate set for seamless infinite loop */}
           {[...cards, ...cards].map((card, i) => (
-            <BuyCard key={i} card={card} />
+            <BuyCard key={`${i}-${card.label}`} card={card} />
           ))}
         </div>
       </div>
