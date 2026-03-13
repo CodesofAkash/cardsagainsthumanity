@@ -110,7 +110,7 @@ function BuyCard({ card }: { card: BuyCard }) {
       className="group relative flex-shrink-0 block overflow-visible"
       style={{
         width: "clamp(520px, 42vw, 780px)",
-        height: "clamp(360px, 28vw, 520px)",
+        height: "clamp(420px, 34vw, 640px)",
         borderRadius: 24,
         background: card.backgroundColor,
         textDecoration: "none",
@@ -128,7 +128,7 @@ function BuyCard({ card }: { card: BuyCard }) {
             style={{
               top: entry.top ?? "-8%",
               right: entry.right ?? "0%",
-              width: entry.width ?? "55%",
+              width: entry.width ?? "62%",
               zIndex: entry.zIndex ?? 2,
               transform: `rotate(${entry.rotation ?? -10}deg)`,
               transition: "transform 0.4s cubic-bezier(0.34,1.56,0.64,1)",
@@ -143,10 +143,10 @@ function BuyCard({ card }: { card: BuyCard }) {
                 width: "100%",
                 height: "auto",
                 objectFit: "contain",
-                filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.38))",
+                filter: "drop-shadow(0 28px 60px rgba(0,0,0,0.45))",
                 // Subtle lift on card hover — group-hover targets parent <a>
               }}
-              className="group-hover:scale-105 transition-transform duration-500"
+              className="group-hover:scale-110 transition-transform duration-700"
             />
           </div>
         );
@@ -160,7 +160,7 @@ function BuyCard({ card }: { card: BuyCard }) {
         <p
           className="font-black"
           style={{
-            fontSize: "clamp(1.9rem,3.2vw,3rem)",
+            fontSize: "clamp(2.2rem,3.6vw,3.6rem)",
             color: fg,
             letterSpacing: "-0.03em",
             lineHeight: 1.08,
@@ -204,7 +204,7 @@ export default function BuySection({
   const trackRef  = useRef<HTMLDivElement>(null);
   const animRef   = useRef<number | null>(null);
   const posRef    = useRef(0);           // current x offset in px (negative = scrolled right)
-  const speedRef  = useRef(0.6);         // px per frame
+  const speedRef  = useRef(0.35);         // px per frame
   const pausedRef = useRef(false);
 
   const cards: BuyCard[] = buyCards?.length ? buyCards : FALLBACK_CARDS;
