@@ -1,5 +1,6 @@
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -19,17 +20,20 @@ import HomePage from './globals/HomePage'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+// All origins that are allowed to hit this CMS
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.NEXT_PUBLIC_FRONTEND_URL,   // e.g. https://your-frontend.vercel.app
+  process.env.NEXT_PUBLIC_CMS_URL,        // e.g. https://cardsagainsthumanity-cms.vercel.app
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+].filter(Boolean) as string[]
+
 export default buildConfig({
-  cors: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    process.env.NEXT_PUBLIC_FRONTEND_URL || '',
-  ].filter(Boolean),
-  csrf: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    process.env.NEXT_PUBLIC_FRONTEND_URL || '',
-  ].filter(Boolean),
+  // ── CORS + CSRF ─────────────────────────────────────────────────────────────
+  // Must include the CMS's own deployed URL so admin panel mutations work
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
 
   admin: {
     user: Users.slug,
@@ -43,10 +47,10 @@ export default buildConfig({
     Media,
     Products,
     Pages,
-    FAQs,          // ← homepage FAQ accordion
-    StuffPosts,    // ← "Stuff we've done" cards
-    BuyCards,      // ← "Buy the game" scroll cards
-    EmailPhrases,  // ← rotating phrases in email section
+    FAQs,
+    StuffPosts,
+    BuyCards,
+    EmailPhrases,
   ],
   globals: [SiteSettings, HomePage],
   editor: lexicalEditor(),
@@ -58,5 +62,18 @@ export default buildConfig({
     url: process.env.DATABASE_URL || '',
   }),
   sharp,
-  plugins: [],
+
+  plugins: [
+    // ── Vercel Blob Storage ──────────────────────────────────────────────────
+    // Replaces local filesystem storage — required on Vercel (read-only FS)
+    // clientUploads: true bypasses the 4.5MB Vercel serverless body limit
+    vercelBlobStorage({
+      enabled: true,
+      collections: {
+        media: true,
+      },
+      token: process.env.BLOB_READ_WRITE_TOKEN || '',
+      clientUploads: true,
+    }),
+  ],
 })
