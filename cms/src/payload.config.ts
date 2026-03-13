@@ -64,15 +64,14 @@ export default buildConfig({
   sharp,
 
   plugins: [
-    // ── Vercel Blob Storage ──────────────────────────────────────────────────
-    // Replaces local filesystem storage — required on Vercel (read-only FS)
-    // clientUploads: true bypasses the 4.5MB Vercel serverless body limit
     vercelBlobStorage({
       enabled: true,
       collections: {
-        media: true,
+        media: {
+          prefix: 'media',
+        },
       },
-      token: process.env.BLOB_READ_WRITE_TOKEN || '',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
       clientUploads: true,
     }),
   ],
