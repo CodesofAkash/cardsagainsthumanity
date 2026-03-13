@@ -4,84 +4,73 @@ const BuyCards: CollectionConfig = {
   slug: 'buy-cards',
   admin: {
     useAsTitle: 'label',
-    defaultColumns: ['label', 'tag', 'order', 'updatedAt'],
-    description:
-      'Cards shown in the "Buy the game" section. Controls text, images, colors and links.',
+    defaultColumns: ['label', 'cta', 'order', 'published', 'updatedAt'],
+    description: 'Cards in the "Buy it now" horizontal scroll. Each card has floating product images, headline text and a CTA button.',
   },
-
   access: {
     read: () => true,
     create: () => true,
     update: () => true,
     delete: () => true,
   },
-
   fields: [
+    // ── Content ─────────────────────────────────────────────────────────────
     {
       name: 'label',
       type: 'text',
       required: true,
       admin: {
-        description:
-          'Main headline on the card. Use \\n for line breaks. Example: "Mooooore\\ncards!"',
+        description: 'Main headline. Use \\n for line breaks. E.g. "For whatever\\nyou\'re into."',
       },
     },
-
-    {
-      name: 'tag',
-      type: 'text',
-      admin: {
-        description:
-          'Optional small tag like "Expansion", "New", "Limited", etc.',
-      },
-    },
-
     {
       name: 'cta',
       type: 'text',
       required: true,
       defaultValue: 'Buy Now',
       admin: {
-        description: 'Button text.',
+        description: 'Button label. E.g. "Buy $5 Packs", "Find Out", "Buy Now"',
       },
     },
-
     {
       name: 'href',
       type: 'text',
       defaultValue: '#',
       admin: {
-        description: 'Where the card links to. Example: /products/hot-box',
+        description: 'Link for the entire card and button. E.g. /products/hot-box',
       },
     },
 
+    // ── Appearance ───────────────────────────────────────────────────────────
     {
       name: 'backgroundColor',
       type: 'text',
       required: true,
-      defaultValue: '#FFB3D9',
+      defaultValue: '#90EE90',
       admin: {
-        description: 'Card background color (hex).',
+        description: 'Card background color (hex or CSS color). E.g. #FFB3D9, #90EE90, #FF7043',
       },
     },
-
     {
       name: 'darkBackground',
       type: 'checkbox',
       defaultValue: false,
       admin: {
-        description:
-          'Enable if the background is dark so text + button become white.',
+        description: 'Check if background is dark — makes text and button white instead of black.',
       },
     },
 
+    // ── Floating product images ───────────────────────────────────────────────
+    // Up to 3 images per card, each with independent position/rotation/scale.
+    // This matches the reference where 2 floating packs appear on a single card.
     {
       name: 'images',
       type: 'array',
-      maxRows: 2,
+      maxRows: 3,
       admin: {
         description:
-          'One or two product images floating on the card.',
+          '1–3 product images floating on the card. Position them independently for a "scattered" look like the reference.',
+        initCollapsed: true,
       },
       fields: [
         {
@@ -90,45 +79,65 @@ const BuyCards: CollectionConfig = {
           relationTo: 'media',
           required: true,
         },
+        // Percentage offsets from card edges — gives pixel-perfect control in the component
         {
-          name: 'position',
-          type: 'select',
-          options: [
-            { label: 'Top Left', value: 'top-left' },
-            { label: 'Top Right', value: 'top-right' },
-            { label: 'Bottom Left', value: 'bottom-left' },
-            { label: 'Bottom Right', value: 'bottom-right' },
-          ],
-          defaultValue: 'top-right',
+          name: 'top',
+          type: 'text',
+          defaultValue: '-5%',
+          admin: {
+            description: 'CSS top value. E.g. "-5%", "10px", "20%". Negative values let image bleed out of card.',
+          },
+        },
+        {
+          name: 'right',
+          type: 'text',
+          defaultValue: '0%',
+          admin: {
+            description: 'CSS right value. E.g. "0%", "-10px".',
+          },
+        },
+        {
+          name: 'width',
+          type: 'text',
+          defaultValue: '55%',
+          admin: {
+            description: 'Width of this image relative to card. E.g. "55%", "300px".',
+          },
         },
         {
           name: 'rotation',
           type: 'number',
-          defaultValue: 0,
+          defaultValue: -12,
           admin: {
-            description: 'Rotate image slightly for style (-20 to 20)',
+            description: 'Rotation in degrees (-45 to 45). Negative = tilts left, positive = tilts right.',
+          },
+        },
+        {
+          name: 'zIndex',
+          type: 'number',
+          defaultValue: 2,
+          admin: {
+            description: 'Stack order when images overlap. Higher = on top.',
           },
         },
       ],
     },
 
+    // ── Ordering / visibility ────────────────────────────────────────────────
     {
       name: 'order',
       type: 'number',
       defaultValue: 99,
       admin: {
-        description:
-          'Lower numbers appear first in the horizontal scroll.',
+        description: 'Display order — lower numbers appear first in the scroll.',
       },
     },
-
     {
       name: 'published',
       type: 'checkbox',
       defaultValue: true,
       admin: {
-        description:
-          'Uncheck to hide this card without deleting it.',
+        description: 'Uncheck to hide without deleting.',
       },
     },
   ],
