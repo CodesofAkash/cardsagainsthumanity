@@ -1,7 +1,9 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useKeenSlider } from "keen-slider/react";
+import "keen-slider/keen-slider.min.css";
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 type ImageEntry = {
@@ -12,7 +14,6 @@ type ImageEntry = {
   rotation?: number;
   zIndex?: number;
 };
-
 type BuyCard = {
   id?: string;
   label: string;
@@ -27,10 +28,9 @@ type BuyCard = {
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────────── */
-function fixNewlines(str: string): string {
+function fixNewlines(str: string) {
   return (str ?? "").replace(/\\n/g, "\n");
 }
-
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL ?? "";
 function resolveUrl(url?: string): string {
   if (!url) return "";
@@ -46,24 +46,14 @@ const FALLBACK_CARDS: BuyCard[] = [
   { label: "What is\nthis stuff?",          cta: "Find Out",           href: "#",                  backgroundColor: "#111111", darkBackground: true, order: 5 },
 ];
 
-/* ══════════════════════════════════════════════════════════════════════
-   SINGLE CARD
-   ══════════════════════════════════════════════════════════════════════ */
-function BuyCardItem({
-  card,
-  isCenter,
-}: {
-  card: BuyCard;
-  isCenter: boolean;
-}) {
+/* ── Single card ─────────────────────────────────────────────────────── */
+function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
   const [hovered, setHovered] = useState(false);
   const label  = fixNewlines(card.label ?? "");
   const isDark = card.darkBackground ?? false;
-  const textColor = isDark ? "#fff" : "#000";
-  const btnBg  = hovered ? (isDark ? "#000" : "#fff") : (isDark ? "#fff" : "#000");
-  const btnFg  = hovered ? (isDark ? "#fff" : "#000") : (isDark ? "#000" : "#fff");
+  const ctaBg = hovered ? "#fff" : (isDark ? "#fff" : "#000");
+  const ctaColor = hovered ? "#000" : (isDark ? "#000" : "#fff");
 
-  // Use ONLY CMS-provided image data — no defaults injected for position/rotation
   const imageList: ImageEntry[] = card.images?.filter(e => e.image?.url).length
     ? card.images!
     : card.productImage?.url
@@ -72,119 +62,92 @@ function BuyCardItem({
 
   return (
     <div
-      onMouseEnter={() => { if (isCenter) setHovered(true); }}
+      onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         position:   "relative",
         width:      "100%",
         height:     "100%",
         background: card.backgroundColor || "#eee",
-        borderRadius: 20,
+        borderRadius: 16,
         overflow:   "hidden",
-        filter:     isCenter ? "none" : "brightness(0.75)",
-        transform:  isCenter ? "scale(1)" : "scale(0.93)",
-        transition: "filter 0.4s ease, transform 0.4s ease",
+        // Dim side cards exactly like CAH does (aria-hidden cards)
+        opacity:    isCenter ? 1 : 0.6,
+        transition: "opacity 0.35s ease",
         userSelect: "none",
-        WebkitUserSelect: "none",
+        cursor:     "pointer",
       }}
     >
-      {/* ── Product images — positions come entirely from CMS ── */}
+      {/* Product images — positions entirely from CMS */}
       {imageList.map((entry, idx) => {
         const src = resolveUrl(entry.image?.url);
         if (!src) return null;
         return (
-          <div
-            key={idx}
-            style={{
-              position:      "absolute",
-              // All positioning from CMS — if CMS didn't set them, use safe defaults
-              top:           entry.top    ?? "-10%",
-              right:         entry.right  ?? "0%",
-              width:         entry.width  ?? "55%",
-              zIndex:        entry.zIndex ?? (10 - idx),
-              transform:     `rotate(${entry.rotation ?? 0}deg) scale(${isCenter && hovered ? 1.07 : 1})`,
-              transition:    "transform 0.5s cubic-bezier(0.34,1.56,0.64,1)",
-              pointerEvents: "none",
-            }}
-          >
+          <div key={idx} style={{
+            position:      "absolute",
+            top:           entry.top    ?? "-10%",
+            right:         entry.right  ?? "0%",
+            width:         entry.width  ?? "55%",
+            zIndex:        entry.zIndex ?? (10 - idx),
+            transform:     `rotate(${entry.rotation ?? 0}deg) scale(${hovered ? 1.08 : 1})`,
+            transition:    "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+            pointerEvents: "none",
+          }}>
             <Image
-              src={src}
-              alt={label}
-              width={600}
-              height={600}
-              unoptimized
-              priority={isCenter}
-              style={{
-                width:     "100%",
-                height:    "auto",
-                objectFit: "contain",
-                filter:    "drop-shadow(0 20px 48px rgba(0,0,0,0.45))",
-                display:   "block",
-              }}
+              src={src} alt={label} width={660} height={1200}
+              unoptimized priority={isCenter}
+              style={{ width: "100%", height: "auto", objectFit: "contain",
+                filter: "drop-shadow(0 16px 40px rgba(0,0,0,0.4))", display: "block" }}
             />
           </div>
         );
       })}
 
-      {/* ── Text + CTA — only show on center card ── */}
+      {/* Text + CTA — bottom left */}
       <div style={{
-        position:   "absolute",
-        bottom:     0,
-        left:       0,
-        zIndex:     20,
-        padding:    "clamp(20px,3vw,40px)",
-        maxWidth:   imageList.length ? "52%" : "86%",
-        opacity:    isCenter ? 1 : 0,
-        transition: "opacity 0.4s ease",
+        position: "absolute", bottom: 0, left: 0, zIndex: 20,
+        padding:  "clamp(24px,3vw,48px)",
+        maxWidth: imageList.length ? "50%" : "85%",
       }}>
         <p style={{
           fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
-          fontWeight:    900,
-          fontSize:      "clamp(1.8rem,2.6vw,2.8rem)",
-          color:         textColor,
+          fontWeight:    800,
+          fontSize:      "clamp(2rem,3.2vw,4rem)",
+          color:         isDark ? "#fff" : "#000",
           letterSpacing: "-0.03em",
           lineHeight:    1.08,
           whiteSpace:    "pre-line",
-          margin:        "0 0 clamp(12px,1.6vw,22px) 0",
-        }}>
-          {label}
-        </p>
-        <span style={{
-          display:       "inline-block",
-          fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
-          fontWeight:    900,
-          fontSize:      "clamp(12px,1vw,16px)",
-          background:    btnBg,
-          color:         btnFg,
-          border:        `2px solid ${isDark ? "#fff" : "#000"}`,
-          padding:       "clamp(8px,0.9vw,13px) clamp(16px,1.8vw,28px)",
-          borderRadius:  9999,
-          letterSpacing: "-0.01em",
-          whiteSpace:    "nowrap",
-          transition:    "background 0.2s, color 0.2s",
-        }}>
+          margin:        "0 0 clamp(14px,2vw,28px) 0",
+        }}>{label}</p>
+
+        <a
+          href={card.href || "#"}
+          style={{
+            display:       "inline-block",
+            fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
+            fontWeight:    800,
+            fontSize:      "clamp(14px,1.2vw,18px)",
+            color:         ctaColor,
+            background:    ctaBg,
+            padding:       "clamp(10px,1vw,16px) clamp(20px,2vw,36px)",
+            borderRadius:  9999,
+            textDecoration: "none",
+            whiteSpace:    "nowrap",
+            letterSpacing: "-0.01em",
+            transition:    "background-color 0.25s ease, color 0.25s ease",
+          }}
+        >
           {card.cta}
-        </span>
+        </a>
       </div>
     </div>
   );
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   BUY SECTION
-   - Drag / swipe to scroll (mouse + touch)
-   - Snaps to nearest card after release
-   - Auto-advances every 5s (pauses on interaction)
-   - Smooth CSS transform animation throughout
-   - 3 cards visible: left peek, center full, right peek
-   - Width reduced ~22% vs full-bleed
+   BUY SECTION  —  keen-slider, mirrors real CAH implementation
+   slide width = calc(83.333% - 5px), loop:true, auto-advance 5s
    ══════════════════════════════════════════════════════════════════════ */
-const AUTO_MS    = 5000;
-// Card width as fraction of container width
-const CENTER_W   = 0.66;   // center card = 66% of container
-const SIDE_W     = 0.17;   // each side peek = 17%
-const GAP_W      = 0.018;  // gap between cards as fraction
-
 export default function BuySection({
   heading,
   buyCards,
@@ -192,142 +155,53 @@ export default function BuySection({
   heading?: string;
   buyCards?: BuyCard[];
 }) {
-  const raw = buyCards?.length ? buyCards : FALLBACK_CARDS;
+  const raw   = buyCards?.length ? buyCards : FALLBACK_CARDS;
   const cards = raw
     .filter(c => c.published !== false)
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
-  const count = cards.length;
 
-  // current center index (can be fractional during drag)
-  const [centerIdx, setCenterIdx] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // live offset in px — updated every frame during drag
-  const offsetRef    = useRef(0);       // current rendered offset (px from "resting" position)
-  const isDragging   = useRef(false);
-  const dragStart    = useRef(0);       // pointer x at drag start
-  const offsetAtDrag = useRef(0);       // offsetRef.value at drag start
-  const isAnimating  = useRef(false);   // true while spring-snapping
-  const autoTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef     = useRef<HTMLDivElement>(null);
-  const centerIdxRef = useRef(0);       // mirror of centerIdx for use in closures
-  centerIdxRef.current = centerIdx;
+  const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
+    loop:    true,
+    mode:    "snap",
+    slides: {
+      // Match screenshot proportions with side peeks and no outer gutter.
+      origin: "center",
+      perView: 1.7,
+      spacing: 24,
+    },
+    breakpoints: {
+      "(min-width: 600px)": {
+        slides: { origin: "center", perView: 1.55, spacing: 24 },
+      },
+      "(min-width: 1000px)": {
+        slides: { origin: "center", perView: 1.7, spacing: 24 },
+      },
+    },
+    slideChanged(s) {
+      setCurrentSlide(s.track.details.rel);
+    },
+  });
 
-  /* ── Measure card width in px ── */
-  const cardPx = useCallback((): number => {
-    if (!containerRef.current) return 500;
-    return containerRef.current.offsetWidth * (CENTER_W + GAP_W);
-  }, []);
-
-  /* ── Apply transform without transition (for drag) ── */
-  const applyOffset = useCallback((px: number, animate: boolean) => {
-    const el = trackRef.current;
-    if (!el) return;
-    el.style.transition = animate
-      ? "transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)"
-      : "none";
-    el.style.transform = `translateX(${px}px)`;
-    offsetRef.current = px;
-  }, []);
-
-  /* ── Snap to a given index ── */
-  const snapTo = useCallback((idx: number, animate = true) => {
-    const clamped = Math.max(0, Math.min(count - 1, idx));
-    const target  = -clamped * cardPx();
-    applyOffset(target, animate);
-    setCenterIdx(clamped);
-    isAnimating.current = animate;
-    if (animate) {
-      setTimeout(() => { isAnimating.current = false; }, 480);
-    }
-  }, [count, cardPx, applyOffset]);
-
-  /* ── Auto-advance ── */
-  const resetAutoTimer = useCallback(() => {
+  /* ── Auto-advance every 5 seconds ── */
+  const scheduleAuto = () => {
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => {
-      const next = (centerIdxRef.current + 1) % count;
-      snapTo(next);
-    }, AUTO_MS);
-  }, [count, snapTo]);
+      instanceRef.current?.next();
+      scheduleAuto();
+    }, 5000);
+  };
 
-  // Init position
   useEffect(() => {
-    applyOffset(0, false);
-    resetAutoTimer();
+    scheduleAuto();
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
   }, []); // eslint-disable-line
 
-  /* ── Pointer/mouse drag handlers ── */
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (isAnimating.current) return;
-    isDragging.current   = true;
-    dragStart.current    = e.clientX;
-    offsetAtDrag.current = offsetRef.current;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    // Cancel auto during drag
-    if (autoTimer.current) clearTimeout(autoTimer.current);
-  }, []);
-
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging.current) return;
-    const delta = e.clientX - dragStart.current;
-    // Resist dragging past first/last card
-    const raw   = offsetAtDrag.current + delta;
-    const min   = -(count - 1) * cardPx();
-    const max   = 0;
-    // rubber-band resistance at edges
-    let clamped = raw;
-    if (raw > max) clamped = max + (raw - max) * 0.25;
-    if (raw < min) clamped = min + (raw - min) * 0.25;
-    applyOffset(clamped, false);
-  }, [count, cardPx, applyOffset]);
-
-  const onPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    const delta = e.clientX - dragStart.current;
-    const cp    = cardPx();
-    // Snap: if dragged > 30% of card width, move one card
-    let newIdx = centerIdxRef.current;
-    if (delta < -cp * 0.3)      newIdx = Math.min(count - 1, newIdx + 1);
-    else if (delta > cp * 0.3)  newIdx = Math.max(0, newIdx - 1);
-    snapTo(newIdx);
-    resetAutoTimer();
-  }, [count, cardPx, snapTo, resetAutoTimer]);
-
-  /* ── Touch equivalents ── */
-  const touchStart = useRef(0);
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStart.current   = e.touches[0].clientX;
-    offsetAtDrag.current = offsetRef.current;
-    isDragging.current   = true;
-    if (autoTimer.current) clearTimeout(autoTimer.current);
-  }, []);
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const delta = e.touches[0].clientX - touchStart.current;
-    const raw   = offsetAtDrag.current + delta;
-    const min   = -(count - 1) * cardPx();
-    const max   = 0;
-    let clamped = raw;
-    if (raw > max) clamped = max + (raw - max) * 0.25;
-    if (raw < min) clamped = min + (raw - min) * 0.25;
-    applyOffset(clamped, false);
-  }, [count, cardPx, applyOffset]);
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    const delta = e.changedTouches[0].clientX - touchStart.current;
-    const cp    = cardPx();
-    let newIdx  = centerIdxRef.current;
-    if (delta < -cp * 0.3)     newIdx = Math.min(count - 1, newIdx + 1);
-    else if (delta > cp * 0.3) newIdx = Math.max(0, newIdx - 1);
-    snapTo(newIdx);
-    resetAutoTimer();
-  }, [count, cardPx, snapTo, resetAutoTimer]);
-
-  if (!count) return null;
+  // Pause auto on user interaction, resume on mouse leave
+  const pauseAuto = () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
+  const resumeAuto = () => scheduleAuto();
 
   return (
     <section style={{ background: "#000", padding: "clamp(48px,6vw,80px) 0" }}>
@@ -346,63 +220,28 @@ export default function BuySection({
         </h2>
       </div>
 
-      {/*
-        ── Outer container: 78% width centered ──
-        Reduced by ~22% from full-bleed. overflow:hidden clips the peeking cards.
-      */}
-      <div
-        ref={containerRef}
-        style={{
-          width:    "78%",          // ← ~22% narrower than full width
-          margin:   "0 auto",
-          overflow: "hidden",
-          padding:  "16px 0",       // vertical room for scale transforms
-          cursor:   "grab",
-          touchAction: "pan-y",     // allow vertical scroll, we handle horizontal
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {/*
-          ── Track: all cards in a row, shifted by translateX ──
-          Width = count * cardWidth.
-          Initial position shows center card + both peeks.
-          We shift the track left to start at card 0 with left peek visible.
-        */}
+      {/* Slider */}
+      <div>
         <div
-          ref={trackRef}
-          style={{
-            display:    "flex",
-            gap:        `${GAP_W * 100}%`,
-            width:      "max-content",
-            willChange: "transform",
-            // Start offset: shift right so the first card sits as "center"
-            // with an artificial left gap equal to SIDE_W
-            paddingLeft: `${SIDE_W * 100}%`,
-          }}
+          ref={sliderRef}
+          className="keen-slider"
+          onMouseEnter={pauseAuto}
+          onMouseLeave={resumeAuto}
+          onTouchStart={pauseAuto}
+          onTouchEnd={resumeAuto}
         >
           {cards.map((card, i) => (
             <div
               key={card.id ?? i}
+              className="keen-slider__slide"
               style={{
-                // Center card is wider than side peeks
-                // All cards are the same DOM width here; visual size difference
-                // comes from scale() on the card itself.
-                width:       `${CENTER_W * 100}%`,
-                // Aspect ratio: wide landscape
-                aspectRatio: "16 / 7.5",
-                flexShrink:  0,
+                // Aspect ratio: portrait-ish like real CAH cards
+                aspectRatio: "16 / 11",
+                borderRadius: 16,
+                overflow: "hidden",
               }}
             >
-              <BuyCardItem
-                card={card}
-                isCenter={i === centerIdx}
-              />
+              <BuyCardItem card={card} isCenter={i === currentSlide} />
             </div>
           ))}
         </div>
