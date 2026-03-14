@@ -1,8 +1,29 @@
-import Image from "next/image";
 import ClientShell from "@/components/ClientShell";
-import StuffSection from "@/components/StuffSection"; // ← import the new client component
+import StuffSection from "../components/StuffSection";
+import StealSectionClient from "@/components/StealSection";
 
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
+
+type FooterLink = { label: string; href?: string };
+type CMSHome = {
+  hero?: { quotes?: { quote?: string; source?: string }[] };
+  about?: { paragraph1?: string; paragraph2?: string };
+  buySection?: { heading?: string };
+  emailSection?: {
+    headingPrefix?: string;
+    headingSuffix?: string;
+    disclaimer?: string;
+    placeholder?: string;
+  };
+  faqSection?: { heading?: string };
+  footer?: {
+    copyright?: string;
+    shopLinks?: FooterLink[];
+    infoLinks?: FooterLink[];
+    findUsLinks?: FooterLink[];
+    legalLinks?: FooterLink[];
+  };
+};
 
 // ── SERVER DATA FETCHERS ───────────────────────────────────────────────────────
 async function getCMSHome() {
@@ -31,11 +52,6 @@ async function getCMSCollections() {
   } catch {
     return { faqs: [], stuffPosts: [], buyCards: [], emailPhrases: [] };
   }
-}
-
-function cmsImg(url?: string) {
-  if (!url) return "";
-  return url.startsWith("http") ? url : `${CMS_URL}${url}`;
 }
 
 // ── FALLBACK DATA ──────────────────────────────────────────────────────────────
@@ -103,7 +119,7 @@ const ICON_POS: React.CSSProperties[] = [
 
 // ── SERVER-ONLY SECTIONS (no interactivity needed) ────────────────────────────
 
-function AboutSection({ cmsHome }: { cmsHome: any }) {
+function AboutSection({ cmsHome }: { cmsHome: CMSHome | null }) {
   const p1 = cmsHome?.about?.paragraph1 || "is a fill-in-the-blank party game that turns your awkward personality and lackluster social skills into hours of fun! Wow.";
   const p2 = cmsHome?.about?.paragraph2 || "The game is simple. Each round, one player asks a question from a black card, and everyone else answers with their funniest white card.";
   return (
@@ -125,47 +141,7 @@ function AboutSection({ cmsHome }: { cmsHome: any }) {
   );
 }
 
-function StealSection({ cmsHome }: { cmsHome: any }) {
-  const heading     = cmsHome?.stealSection?.heading     || "Steal the game.";
-  const body        = cmsHome?.stealSection?.body        || "Since day one, Cards Against Humanity has been available as a free download. You can download the PDFs and printing instructions right here—all you need is a printer, scissors, and a prehensile appendage.";
-  const body2       = cmsHome?.stealSection?.body2       || "Please note: there's no legal way to use these PDFs to make money, so don't ask.";
-  const downloadUrl = cmsHome?.stealSection?.downloadUrl || "https://s3.amazonaws.com/cah/CAH_PrintAndPlay.pdf";
-  const badgeTxt    = cmsHome?.stealSection?.badgeText   || "Free!\nDownload\nnow!";
-  const size = 170, cx = size / 2, cy = size / 2, n = 16, oR = cx - 2, iR = cx - 13;
-  let d = "";
-  for (let i = 0; i < n * 2; i++) { const a = (i * Math.PI) / n - Math.PI / 2; const r = i % 2 ? iR : oR; d += (i ? "L" : "M") + `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`; }
-  d += "Z";
-  return (
-    <section className="bg-white relative overflow-hidden" style={{ padding: "96px 48px" }}>
-      <div className="absolute" style={{ top: 40, right: 60 }}>
-        <div style={{ width: size, height: size, position: "relative" }}>
-          <svg width={size} height={size} style={{ position: "absolute" }}><path d={d} fill="#b8f5b0" /></svg>
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
-            <span className="font-black text-center leading-tight whitespace-pre-line text-black" style={{ fontSize: 12 }}>{badgeTxt}</span>
-          </div>
-        </div>
-      </div>
-      <div className="mx-auto" style={{ maxWidth: 760 }}>
-        <h2 className="text-black font-black mb-8" style={{ fontSize: "clamp(2.8rem,6vw,4.5rem)", letterSpacing: "-0.03em" }}>{heading}</h2>
-        <p className="text-black leading-relaxed mb-6" style={{ fontSize: "clamp(1.15rem,2vw,1.45rem)", lineHeight: 1.65 }}>{body}</p>
-        <p className="text-black leading-relaxed mb-12" style={{ fontSize: "clamp(1.15rem,2vw,1.45rem)", lineHeight: 1.65 }}>{body2}</p>
-        <div className="flex items-center gap-5 flex-wrap">
-          <a href={downloadUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-            <div style={{ background: "#e8503a", color: "white", fontWeight: 900, fontSize: "1.05rem", padding: "14px 52px 14px 24px", borderRadius: 6, clipPath: "polygon(0 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,0 100%)" }}>
-              Download: Click here!
-            </div>
-          </a>
-          <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="font-black rounded-full"
-            style={{ background: "#000", color: "white", padding: "14px 36px", fontSize: "1.1rem", textDecoration: "none" }}>
-            Download Files
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FooterSection({ cmsHome }: { cmsHome: any }) {
+function FooterSection({ cmsHome }: { cmsHome: CMSHome | null }) {
   const copyright  = cmsHome?.footer?.copyright  || "©2026 Cards Against Humanity LLC";
   const shopLinks  = cmsHome?.footer?.shopLinks  || [{ label: "All Products", href: "#" },{ label: "Main Games", href: "#" },{ label: "Expansions", href: "#" },{ label: "Family", href: "#" },{ label: "Packs", href: "#" },{ label: "Other Stuff", href: "#" }];
   const infoLinks  = cmsHome?.footer?.infoLinks  || [{ label: "About", href: "#" },{ label: "Support", href: "#" },{ label: "Contact", href: "#" },{ label: "Retailers", href: "#" },{ label: "Steal", href: "#" },{ label: "Careers", href: "#" }];
@@ -181,7 +157,7 @@ function FooterSection({ cmsHome }: { cmsHome: any }) {
         {cols.map(col => (
           <div key={col.heading}>
             <p className="font-black text-black mb-5" style={{ fontSize: "1rem" }}>{col.heading}</p>
-            {col.links.map((l: any) => (
+            {col.links.map((l: FooterLink) => (
               <a key={l.label} href={l.href || "#"} className="block text-black hover:opacity-60"
                 style={{ fontSize: "1rem", textDecoration: "underline", marginBottom: 10 }}>{l.label}</a>
             ))}
@@ -194,7 +170,7 @@ function FooterSection({ cmsHome }: { cmsHome: any }) {
             <input type="email" name="email" placeholder="Email Address"
               className="flex-1 outline-none bg-white text-black placeholder-gray-400"
               style={{ padding: "12px 14px", fontSize: "0.95rem" }} />
-            <button type="submit" className="flex items-center justify-center rounded-full border-2 text-black border-black hover:bg-black hover:text-white transition-colors flex-shrink-0"
+            <button type="submit" className="flex items-center justify-center rounded-full border-2 text-black border-black hover:bg-black hover:text-white transition-colors shrink-0"
               style={{ width: 36, height: 36, margin: "0 6px" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
@@ -208,7 +184,7 @@ function FooterSection({ cmsHome }: { cmsHome: any }) {
           India <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z" /></svg>
         </span>
         <div className="flex gap-6 flex-wrap">
-          {legalLinks.map((l: any) => (
+          {legalLinks.map((l: FooterLink) => (
             <a key={l.label} href={l.href || "#"} className="text-black hover:underline" style={{ fontSize: "0.95rem" }}>{l.label}</a>
           ))}
         </div>
@@ -238,15 +214,16 @@ export default async function Home() {
         buyCardItems={buyCardItems}
         phrases={phrases}
         faqItems={faqItems}
-        aboutSlot={<AboutSection cmsHome={cmsHome} />}
-        stealSlot={<StealSection cmsHome={cmsHome} />}
+        aboutSlot={<AboutSection key="about-slot" cmsHome={cmsHome} />}
+        stealSlot={<StealSectionClient key="steal-slot" cmsHome={cmsHome} />}
         stuffSlot={
           <StuffSection
+            key="stuff-slot"
             cmsHome={cmsHome}
             stuffPosts={stuffPosts}
           />
         }
-        footerSlot={<FooterSection cmsHome={cmsHome} />}
+        footerSlot={<FooterSection key="footer-slot" cmsHome={cmsHome} />}
       />
     </main>
   );

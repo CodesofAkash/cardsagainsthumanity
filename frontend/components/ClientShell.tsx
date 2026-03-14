@@ -8,11 +8,44 @@ import CheckoutDrawer from "@/components/CheckoutDrawer";
 import BuySection from "@/components/BuySection";
 import HeroSection from "@/components/HeroSection";
 
+type Quote = { quote?: string; source?: string };
+type BuyCardItem = {
+  id?: string;
+  label: string;
+  cta: string;
+  href?: string;
+  backgroundColor: string;
+  darkBackground?: boolean;
+};
+type PhraseItem = { phrase: string };
+type FAQItem = { question: string; answer: string };
+
+type ClientShellProps = {
+  cmsHome: {
+    buySection?: { heading?: string };
+    emailSection?: {
+      headingPrefix?: string;
+      headingSuffix?: string;
+      disclaimer?: string;
+      placeholder?: string;
+    };
+    faqSection?: { heading?: string };
+  } | null;
+  quotes: Quote[];
+  buyCardItems: BuyCardItem[];
+  phrases: PhraseItem[];
+  faqItems: FAQItem[];
+  aboutSlot: React.ReactNode;
+  stealSlot: React.ReactNode;
+  stuffSlot: React.ReactNode;
+  footerSlot: React.ReactNode;
+};
+
 const EmailSection = dynamic(() => import("@/components/EmailSection"), { ssr: false });
 const FAQSection   = dynamic(() => import("@/components/FAQSection"),   { ssr: false });
 const Navbar       = dynamic(() => import("@/components/Navbar"),       { ssr: false });
 
-function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSlot, stealSlot, stuffSlot, footerSlot }: any) {
+function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSlot, stealSlot, stuffSlot, footerSlot }: ClientShellProps) {
   const { cartData, cartCount, cartOpen, checkoutOpen, setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCartCtx();
 
   return (
@@ -73,7 +106,7 @@ function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSl
   );
 }
 
-export default function ClientShell(props: any) {
+export default function ClientShell(props: ClientShellProps) {
   return (
     <CartProvider>
       <PageContent {...props} />

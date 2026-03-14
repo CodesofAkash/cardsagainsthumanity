@@ -19,6 +19,10 @@ type StuffPost = {
   published?: boolean;
 };
 
+type StuffHome = {
+  stuffSection?: { heading?: string };
+};
+
 /* ─── Helper ─────────────────────────────────────────────────────────── */
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL ?? "";
 function resolveUrl(url?: string): string {
@@ -77,20 +81,20 @@ function StuffCard({ post }: { post: StuffPost }) {
         borderRadius:   20,
         overflow:       "hidden",
         textDecoration: "none",
-        aspectRatio:    "3 / 4.8",
+        aspectRatio:    "3 / 4.2",
       }}
     >
-      {/* Floating illustration — moves up+right on hover */}
+      {/* Floating illustration — moves bottom-left -> top-right on hover */}
       {imgSrc && (
         <div
           style={{
             position:   "absolute",
-            bottom:     hovered ? "-2%" : "-6%",
-            right:      hovered ? "-2%" : "-6%",
-            width:      "88%",
+            bottom:     "-9%",
+            left:       "-10%",
+            width:      "74%",
             zIndex:     1,
-            transform:  hovered ? "scale(1.06)" : "scale(1)",
-            transition: "bottom 0.45s ease, right 0.45s ease, transform 0.45s ease",
+            transform:  hovered ? "translate(14px, -14px) scale(1.04)" : "translate(0, 0) scale(1)",
+            transition: "transform 0.45s ease",
             pointerEvents: "none",
           }}
         >
@@ -115,10 +119,7 @@ function StuffCard({ post }: { post: StuffPost }) {
         position:       "absolute",
         inset:          0,
         zIndex:         2,
-        display:        "flex",
-        flexDirection:  "column",
-        justifyContent: "space-between",
-        padding:        "clamp(18px,2.5vw,32px)",
+        padding:        "clamp(18px,2.3vw,30px)",
       }}>
 
         {/* Tag pill — top left */}
@@ -143,7 +144,7 @@ function StuffCard({ post }: { post: StuffPost }) {
         </div>
 
         {/* Bottom: headline + CTA */}
-        <div>
+        <div style={{ maxWidth: "86%", marginTop: "clamp(22px,2.8vw,44px)" }}>
           <p style={{
             fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
             fontWeight:    800,
@@ -151,49 +152,56 @@ function StuffCard({ post }: { post: StuffPost }) {
             color:         txtColor,
             letterSpacing: "-0.02em",
             lineHeight:    1.1,
-            margin:        "0 0 clamp(16px,2vw,28px) 0",
+            margin:        0,
           }}>
             {post.label}
           </p>
+        </div>
 
-          {/* "Read →" CTA row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{
-              fontFamily: "Helvetica Neue, Arial Black, sans-serif",
-              fontWeight: 800,
-              fontSize:   "clamp(14px,1.2vw,18px)",
-              color:      txtColor,
-            }}>
-              {ctaLabel}
-            </span>
+        {/* "Read →" CTA row */}
+        <div style={{
+          position: "absolute",
+          right: "clamp(18px,2.3vw,30px)",
+          bottom: "clamp(18px,2.3vw,30px)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}>
+          <span style={{
+            fontFamily: "Helvetica Neue, Arial Black, sans-serif",
+            fontWeight: 800,
+            fontSize:   "clamp(14px,1.2vw,18px)",
+            color:      txtColor,
+          }}>
+            {ctaLabel}
+          </span>
 
-            {/* Circle arrow — inverts on hover */}
-            <div style={{
-              width:          "clamp(32px,2.5vw,42px)",
-              height:         "clamp(32px,2.5vw,42px)",
-              borderRadius:   "50%",
-              border:         `2px solid ${txtColor}`,
-              background:     hovered ? txtColor : "transparent",
-              display:        "flex",
-              alignItems:     "center",
-              justifyContent: "center",
-              transition:     "background 0.2s ease",
-              flexShrink:     0,
-            }}>
-              <svg
-                width="14" height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={hovered ? bg : txtColor}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ transform: "rotate(-45deg)", transition: "stroke 0.2s ease" }}
-              >
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </div>
+          {/* Circle arrow — inverts on hover */}
+          <div style={{
+            width:          "clamp(32px,2.5vw,42px)",
+            height:         "clamp(32px,2.5vw,42px)",
+            borderRadius:   "50%",
+            border:         `2px solid ${txtColor}`,
+            background:     hovered ? txtColor : "transparent",
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "center",
+            transition:     "background 0.2s ease",
+            flexShrink:     0,
+          }}>
+            <svg
+              width="14" height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={hovered ? bg : txtColor}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ transform: "rotate(-45deg)", transition: "stroke 0.2s ease" }}
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
           </div>
         </div>
       </div>
@@ -208,7 +216,7 @@ export default function StuffSection({
   cmsHome,
   stuffPosts,
 }: {
-  cmsHome?: any;
+  cmsHome?: StuffHome | null;
   stuffPosts?: StuffPost[];
 }) {
   const heading = cmsHome?.stuffSection?.heading || "Stuff we've done.";
