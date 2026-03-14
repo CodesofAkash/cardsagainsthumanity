@@ -233,15 +233,15 @@ export default function BuySection({
     mode: "snap",
     slides: {
       origin:  "center",
-      perView: 1.22,   // center card full + ~11% of each side card peeking
-      spacing: 20,
+      perView: 1.58,
+      spacing: 26,
     },
     breakpoints: {
       "(min-width: 600px)": {
-        slides: { origin: "center", perView: 1.3, spacing: 20 },
+        slides: { origin: "center", perView: 1.64, spacing: 32 },
       },
       "(min-width: 1000px)": {
-        slides: { origin: "center", perView: 1.22, spacing: 24 },
+        slides: { origin: "center", perView: 1.68, spacing: 32 },
       },
     },
     slideChanged(s) {
@@ -296,7 +296,7 @@ export default function BuySection({
             key={card.id ?? i}
             className="keen-slider__slide"
             style={{
-              aspectRatio:  "16 / 11",
+              aspectRatio:  "16 / 11.5",
               borderRadius: 16,
               overflow:     "hidden",
             }}
