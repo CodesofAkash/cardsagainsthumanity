@@ -46,13 +46,50 @@ const FALLBACK_CARDS: BuyCard[] = [
   { label: "What is\nthis stuff?",          cta: "Find Out",           href: "#",                  backgroundColor: "#111111", darkBackground: true, order: 5 },
 ];
 
-/* ── Single card ─────────────────────────────────────────────────────── */
+/*
+  ─── CSS keyframe injection ────────────────────────────────────────────
+  We inject a <style> tag once so each floating image can use a CSS
+  animation for oscillation. The rotation center point comes from the
+  CMS `rotation` value, passed as a CSS custom property --base-rot.
+  This keeps the animation fully in CSS (no JS per-frame) and doesn't
+  conflict with the hover scale which is applied via inline transform.
+*/
+const ANIM_STYLE = `
+  @keyframes cahTilt {
+    0%   { transform: rotate(calc(var(--base-rot, 0deg) - 2.5deg)) scale(var(--img-scale, 1)); }
+    50%  { transform: rotate(calc(var(--base-rot, 0deg) + 2.5deg)) scale(var(--img-scale, 1)); }
+    100% { transform: rotate(calc(var(--base-rot, 0deg) - 2.5deg)) scale(var(--img-scale, 1)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cah-img-tilt { animation: none !important; }
+  }
+`;
+
+function useInjectStyle() {
+  useEffect(() => {
+    const id = "cah-buy-anim";
+    if (document.getElementById(id)) return;
+    const el = document.createElement("style");
+    el.id = id;
+    el.textContent = ANIM_STYLE;
+    document.head.appendChild(el);
+    return () => { document.getElementById(id)?.remove(); };
+  }, []);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SINGLE CARD
+   ═══════════════════════════════════════════════════════════════════════ */
 function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
   const [hovered, setHovered] = useState(false);
+  useInjectStyle();
+
   const label  = fixNewlines(card.label ?? "");
   const isDark = card.darkBackground ?? false;
-  const ctaBg = hovered ? "#fff" : (isDark ? "#fff" : "#000");
-  const ctaColor = hovered ? "#000" : (isDark ? "#000" : "#fff");
+
+  // Button: on hover → invert colors
+  const ctaBg    = hovered ? (isDark ? "#000" : "#fff") : (isDark ? "#fff" : "#000");
+  const ctaColor = hovered ? (isDark ? "#fff" : "#000") : (isDark ? "#000" : "#fff");
 
   const imageList: ImageEntry[] = card.images?.filter(e => e.image?.url).length
     ? card.images!
@@ -71,63 +108,67 @@ function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
         background: card.backgroundColor || "#eee",
         borderRadius: 16,
         overflow:   "hidden",
-        // Dim side cards exactly like CAH does (aria-hidden cards)
-        opacity:    isCenter ? 1 : 0.6,
+        opacity:    isCenter ? 1 : 0.55,
         transition: "opacity 0.35s ease",
         userSelect: "none",
         cursor:     "pointer",
       }}
     >
-      {/* Product images — positions entirely from CMS */}
+      {/* ── Floating product images ── */}
       {imageList.map((entry, idx) => {
         const src = resolveUrl(entry.image?.url);
         if (!src) return null;
+
+        // CMS rotation value (degrees) — becomes the CSS variable center point
+        const baseRot = entry.rotation ?? 0;
+        // Stagger animation start per image so they don't all move in sync
+        const delay = idx * 1.8;
+        // Duration varies slightly per image for organic feel
+        const duration = 8 + idx * 2.5;
+
         return (
           <div
             key={idx}
-            className="buy-card-image-tilt"
+            className="cah-img-tilt"
             style={{
-              position: "absolute",
-              top: entry.top ?? "-10%",
-              right: entry.right ?? "0%",
-              width: entry.width ?? "55%",
-              zIndex: entry.zIndex ?? (10 - idx),
+              position:      "absolute",
+              top:           entry.top   ?? "-10%",
+              right:         entry.right ?? "0%",
+              width:         entry.width ?? "55%",
+              zIndex:        entry.zIndex ?? (10 - idx),
               pointerEvents: "none",
-              animationDuration: `${8 + idx * 1.2}s`,
-              animationDelay: `${-idx * 0.7}s`,
-              ["--base-rotation" as string]: `${entry.rotation ?? 0}deg`,
-              ["--tilt-amplitude" as string]: `${2.2 + (idx % 2) * 0.8}deg`,
+              // CSS custom properties used by the keyframe animation
+              ["--base-rot" as any]:   `${baseRot}deg`,
+              // Scale: 1 normally, 1.07 on hover — CSS var picked up by keyframe
+              ["--img-scale" as any]:  hovered ? "1.07" : "1",
+              animation: `cahTilt ${duration}s ease-in-out ${delay}s infinite`,
             }}
           >
-            <div
+            <Image
+              src={src}
+              alt={label}
+              width={660}
+              height={1200}
+              unoptimized
+              priority={isCenter}
               style={{
-                transform: `scale(${hovered ? 1.08 : 1})`,
-                transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+                width:     "100%",
+                height:    "auto",
+                objectFit: "contain",
+                filter:    "drop-shadow(0 16px 40px rgba(0,0,0,0.4))",
+                display:   "block",
               }}
-            >
-              <Image
-                src={src}
-                alt={label}
-                width={660}
-                height={1200}
-                unoptimized
-                priority={isCenter}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  objectFit: "contain",
-                  filter: "drop-shadow(0 16px 40px rgba(0,0,0,0.4))",
-                  display: "block",
-                }}
-              />
-            </div>
+            />
           </div>
         );
       })}
 
-      {/* Text + CTA — bottom left */}
+      {/* ── Text + CTA — bottom left ── */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, zIndex: 20,
+        position: "absolute",
+        bottom:   0,
+        left:     0,
+        zIndex:   20,
         padding:  "clamp(24px,3vw,48px)",
         maxWidth: imageList.length ? "50%" : "85%",
       }}>
@@ -140,23 +181,26 @@ function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
           lineHeight:    1.08,
           whiteSpace:    "pre-line",
           margin:        "0 0 clamp(14px,2vw,28px) 0",
-        }}>{label}</p>
+        }}>
+          {label}
+        </p>
 
         <a
           href={card.href || "#"}
           style={{
-            display:       "inline-block",
-            fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
-            fontWeight:    800,
-            fontSize:      "clamp(14px,1.2vw,18px)",
-            color:         ctaColor,
-            background:    ctaBg,
-            padding:       "clamp(10px,1vw,16px) clamp(20px,2vw,36px)",
-            borderRadius:  9999,
+            display:        "inline-block",
+            fontFamily:     "Helvetica Neue, Arial Black, sans-serif",
+            fontWeight:     800,
+            fontSize:       "clamp(14px,1.2vw,18px)",
+            color:          ctaColor,
+            background:     ctaBg,
+            padding:        "clamp(10px,1vw,16px) clamp(20px,2vw,36px)",
+            borderRadius:   9999,
             textDecoration: "none",
-            whiteSpace:    "nowrap",
-            letterSpacing: "-0.01em",
-            transition:    "background-color 0.25s ease, color 0.25s ease",
+            whiteSpace:     "nowrap",
+            letterSpacing:  "-0.01em",
+            transition:     "background 0.25s ease, color 0.25s ease",
+            border:         `2px solid ${isDark ? "#fff" : "#000"}`,
           }}
         >
           {card.cta}
@@ -166,10 +210,9 @@ function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
   );
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   BUY SECTION  —  keen-slider, mirrors real CAH implementation
-   slide width = calc(83.333% - 5px), loop:true, auto-advance 5s
-   ══════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   BUY SECTION — keen-slider, loop:true, center origin, auto-advance 5s
+   ═══════════════════════════════════════════════════════════════════════ */
 export default function BuySection({
   heading,
   buyCards,
@@ -186,20 +229,19 @@ export default function BuySection({
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
-    loop:    true,
-    mode:    "snap",
+    loop: true,
+    mode: "snap",
     slides: {
-      // Match screenshot proportions with side peeks and no outer gutter.
-      origin: "center",
-      perView: 1.7,
-      spacing: 24,
+      origin:  "center",
+      perView: 1.22,   // center card full + ~11% of each side card peeking
+      spacing: 20,
     },
     breakpoints: {
       "(min-width: 600px)": {
-        slides: { origin: "center", perView: 1.55, spacing: 24 },
+        slides: { origin: "center", perView: 1.3, spacing: 20 },
       },
       "(min-width: 1000px)": {
-        slides: { origin: "center", perView: 1.7, spacing: 24 },
+        slides: { origin: "center", perView: 1.22, spacing: 24 },
       },
     },
     slideChanged(s) {
@@ -207,7 +249,6 @@ export default function BuySection({
     },
   });
 
-  /* ── Auto-advance every 5 seconds ── */
   const scheduleAuto = () => {
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => {
@@ -221,41 +262,11 @@ export default function BuySection({
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
   }, []); // eslint-disable-line
 
-  // Pause auto on user interaction, resume on mouse leave
-  const pauseAuto = () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
+  const pauseAuto  = () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
   const resumeAuto = () => scheduleAuto();
 
   return (
-    <>
-      <style jsx>{`
-        .buy-card-image-tilt {
-          transform-origin: center center;
-          animation-name: buy-card-tilt;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-        }
-
-        @keyframes buy-card-tilt {
-          0% {
-            transform: rotate(calc(var(--base-rotation) - var(--tilt-amplitude)));
-          }
-          50% {
-            transform: rotate(calc(var(--base-rotation) + var(--tilt-amplitude)));
-          }
-          100% {
-            transform: rotate(calc(var(--base-rotation) - var(--tilt-amplitude)));
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .buy-card-image-tilt {
-            animation: none;
-            transform: rotate(var(--base-rotation));
-          }
-        }
-      `}</style>
-
-      <section style={{ background: "#000", padding: "clamp(48px,6vw,80px) 0" }}>
+    <section style={{ background: "#000", padding: "clamp(48px,6vw,80px) 0" }}>
       {/* Heading */}
       <div style={{ paddingLeft: "clamp(32px,6vw,80px)", marginBottom: "clamp(24px,3vw,40px)" }}>
         <h2 style={{
@@ -272,32 +283,28 @@ export default function BuySection({
       </div>
 
       {/* Slider */}
-      <div>
-        <div
-          ref={sliderRef}
-          className="keen-slider"
-          onMouseEnter={pauseAuto}
-          onMouseLeave={resumeAuto}
-          onTouchStart={pauseAuto}
-          onTouchEnd={resumeAuto}
-        >
-          {cards.map((card, i) => (
-            <div
-              key={card.id ?? i}
-              className="keen-slider__slide"
-              style={{
-                // Aspect ratio: portrait-ish like real CAH cards
-                aspectRatio: "16 / 11",
-                borderRadius: 16,
-                overflow: "hidden",
-              }}
-            >
-              <BuyCardItem card={card} isCenter={i === currentSlide} />
-            </div>
-          ))}
-        </div>
+      <div
+        ref={sliderRef}
+        className="keen-slider"
+        onMouseEnter={pauseAuto}
+        onMouseLeave={resumeAuto}
+        onTouchStart={pauseAuto}
+        onTouchEnd={resumeAuto}
+      >
+        {cards.map((card, i) => (
+          <div
+            key={card.id ?? i}
+            className="keen-slider__slide"
+            style={{
+              aspectRatio:  "16 / 11",
+              borderRadius: 16,
+              overflow:     "hidden",
+            }}
+          >
+            <BuyCardItem card={card} isCenter={i === currentSlide} />
+          </div>
+        ))}
       </div>
-      </section>
-    </>
+    </section>
   );
 }
