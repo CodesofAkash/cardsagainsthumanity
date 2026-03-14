@@ -83,22 +83,44 @@ function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
         const src = resolveUrl(entry.image?.url);
         if (!src) return null;
         return (
-          <div key={idx} style={{
-            position:      "absolute",
-            top:           entry.top    ?? "-10%",
-            right:         entry.right  ?? "0%",
-            width:         entry.width  ?? "55%",
-            zIndex:        entry.zIndex ?? (10 - idx),
-            transform:     `rotate(${entry.rotation ?? 0}deg) scale(${hovered ? 1.08 : 1})`,
-            transition:    "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
-            pointerEvents: "none",
-          }}>
-            <Image
-              src={src} alt={label} width={660} height={1200}
-              unoptimized priority={isCenter}
-              style={{ width: "100%", height: "auto", objectFit: "contain",
-                filter: "drop-shadow(0 16px 40px rgba(0,0,0,0.4))", display: "block" }}
-            />
+          <div
+            key={idx}
+            className="buy-card-image-tilt"
+            style={{
+              position: "absolute",
+              top: entry.top ?? "-10%",
+              right: entry.right ?? "0%",
+              width: entry.width ?? "55%",
+              zIndex: entry.zIndex ?? (10 - idx),
+              pointerEvents: "none",
+              animationDuration: `${8 + idx * 1.2}s`,
+              animationDelay: `${-idx * 0.7}s`,
+              ["--base-rotation" as string]: `${entry.rotation ?? 0}deg`,
+              ["--tilt-amplitude" as string]: `${2.2 + (idx % 2) * 0.8}deg`,
+            }}
+          >
+            <div
+              style={{
+                transform: `scale(${hovered ? 1.08 : 1})`,
+                transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+              }}
+            >
+              <Image
+                src={src}
+                alt={label}
+                width={660}
+                height={1200}
+                unoptimized
+                priority={isCenter}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  objectFit: "contain",
+                  filter: "drop-shadow(0 16px 40px rgba(0,0,0,0.4))",
+                  display: "block",
+                }}
+              />
+            </div>
           </div>
         );
       })}
@@ -204,7 +226,36 @@ export default function BuySection({
   const resumeAuto = () => scheduleAuto();
 
   return (
-    <section style={{ background: "#000", padding: "clamp(48px,6vw,80px) 0" }}>
+    <>
+      <style jsx>{`
+        .buy-card-image-tilt {
+          transform-origin: center center;
+          animation-name: buy-card-tilt;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+
+        @keyframes buy-card-tilt {
+          0% {
+            transform: rotate(calc(var(--base-rotation) - var(--tilt-amplitude)));
+          }
+          50% {
+            transform: rotate(calc(var(--base-rotation) + var(--tilt-amplitude)));
+          }
+          100% {
+            transform: rotate(calc(var(--base-rotation) - var(--tilt-amplitude)));
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .buy-card-image-tilt {
+            animation: none;
+            transform: rotate(var(--base-rotation));
+          }
+        }
+      `}</style>
+
+      <section style={{ background: "#000", padding: "clamp(48px,6vw,80px) 0" }}>
       {/* Heading */}
       <div style={{ paddingLeft: "clamp(32px,6vw,80px)", marginBottom: "clamp(24px,3vw,40px)" }}>
         <h2 style={{
@@ -246,6 +297,7 @@ export default function BuySection({
           ))}
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 }

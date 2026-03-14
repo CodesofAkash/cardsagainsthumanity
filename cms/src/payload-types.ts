@@ -281,7 +281,7 @@ export interface Faq {
   createdAt: string;
 }
 /**
- * Cards shown in the "Stuff we've done" section. Add new ones anytime.
+ * Cards shown in the "Stuff we’ve done" section on the homepage.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "stuff-posts".
@@ -289,31 +289,47 @@ export interface Faq {
 export interface StuffPost {
   id: string;
   /**
-   * Title displayed on the card. E.g. "Black Friday 2018"
+   * Small pill label shown at the top. Example: "Black Friday 2018".
+   */
+  tag: string;
+  /**
+   * Main headline text. Example: "Holy fuck we had some deals."
    */
   label: string;
   /**
-   * Small tag shown above the title.
-   */
-  tag?: ('Read' | 'Watch' | 'Listen' | 'Play') | null;
-  /**
-   * Short description shown below the title.
-   */
-  description?: string | null;
-  /**
-   * Square image (1080×1080 recommended).
+   * Square illustration (1080×1080 recommended). Appears floating on the card.
    */
   image: string | Media;
   /**
-   * Link URL when the card is clicked.
+   * Where the card links when clicked. Example: /blog/black-friday
    */
   href?: string | null;
   /**
-   * Lower numbers appear first.
+   * Label shown beside the arrow button.
+   */
+  cta?: ('Read' | 'Watch' | 'Listen' | 'Play') | null;
+  /**
+   * Card background color (hex). Example: #fffe5b, #ede5ff, #1b5bff
+   */
+  backgroundColor?: string | null;
+  /**
+   * Main headline text color. Example: #fe2f2f, #7333f1, #d7b73b
+   */
+  textColor?: string | null;
+  /**
+   * Background color of the tag pill.
+   */
+  tagBg?: string | null;
+  /**
+   * Text color inside the tag pill.
+   */
+  tagColor?: string | null;
+  /**
+   * Display order. Lower numbers appear first. Use 10, 20, 30...
    */
   order?: number | null;
   /**
-   * Uncheck to hide without deleting.
+   * Uncheck to hide this card without deleting it.
    */
   published?: boolean | null;
   updatedAt: string;
@@ -616,11 +632,15 @@ export interface FaqsSelect<T extends boolean = true> {
  * via the `definition` "stuff-posts_select".
  */
 export interface StuffPostsSelect<T extends boolean = true> {
-  label?: T;
   tag?: T;
-  description?: T;
+  label?: T;
   image?: T;
   href?: T;
+  cta?: T;
+  backgroundColor?: T;
+  textColor?: T;
+  tagBg?: T;
+  tagColor?: T;
   order?: T;
   published?: T;
   updatedAt?: T;

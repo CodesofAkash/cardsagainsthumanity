@@ -1,9 +1,10 @@
 import Image from "next/image";
 import ClientShell from "@/components/ClientShell";
+import StuffSection from "@/components/StuffSection"; // ← import the new client component
 
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
 
-// ── SERVER DATA FETCHERS (run at build/revalidate time) ───────────────────────
+// ── SERVER DATA FETCHERS ───────────────────────────────────────────────────────
 async function getCMSHome() {
   try {
     const res = await fetch(`${CMS_URL}/api/globals/home-page?depth=2`, {
@@ -16,13 +17,13 @@ async function getCMSHome() {
 async function getCMSCollections() {
   try {
     const [faqs, stuffPosts, buyCards, emailPhrases] = await Promise.all([
-      fetch( `${process.env.NEXT_PUBLIC_CMS_URL}/api/faqs` + `?where[published][equals]=true` + `&sort=order` + `&limit=100`, { next: { revalidate: 60 } }),
+      fetch(`${CMS_URL}/api/faqs?where[published][equals]=true&sort=order&limit=100`,          { next: { revalidate: 60 } }),
       fetch(`${CMS_URL}/api/stuff-posts?where[published][equals]=true&sort=order&limit=20&depth=2`, { next: { revalidate: 60 } }),
       fetch(`${CMS_URL}/api/buy-cards?where[published][equals]=true&sort=order&limit=20&depth=2`,   { next: { revalidate: 60 } }),
       fetch(`${CMS_URL}/api/email-phrases?where[published][equals]=true&sort=order&limit=30`,       { next: { revalidate: 60 } }),
     ]);
     return {
-      faqs:         faqs?.ok        ? (await faqs.json()).docs         ?? [] : [],
+      faqs:         faqs.ok         ? (await faqs.json()).docs         ?? [] : [],
       stuffPosts:   stuffPosts.ok   ? (await stuffPosts.json()).docs   ?? [] : [],
       buyCards:     buyCards.ok     ? (await buyCards.json()).docs     ?? [] : [],
       emailPhrases: emailPhrases.ok ? (await emailPhrases.json()).docs ?? [] : [],
@@ -37,7 +38,7 @@ function cmsImg(url?: string) {
   return url.startsWith("http") ? url : `${CMS_URL}${url}`;
 }
 
-// ── FALLBACK DATA (used when CMS collections are empty) ───────────────────────
+// ── FALLBACK DATA ──────────────────────────────────────────────────────────────
 const FALLBACK_QUOTES = [
   { quote: '"Bad."',        source: "NPR" },
   { quote: '"Stupid."',     source: "Bloomberg" },
@@ -69,11 +70,6 @@ const FALLBACK_FAQS = [
   { question: "Whatever happened to the Cards Against Humanity TV show?", answer: "Also a financial catastrophe." },
   { question: "I love you.", answer: "I love you, too." },
 ];
-const FALLBACK_STUFF = [
-  { label: "Black Friday 2018",   tag: "Read", description: "Holy fuck we had some deals.",             href: "#", image: { url: "https://img.cah.io/images/vc07edlh/production/c1f921d8c8fd60969110124ebb20ad5d9878861c-1080x1080.png?auto=format&q=75&w=400" } },
-  { label: "Science Scholarship", tag: "Read", description: "A full-tuition scholarship for women.",    href: "#", image: { url: "https://img.cah.io/images/vc07edlh/production/31fcc3f68a626462e5707bcc5ce19ee716f2e173-1080x1080.png?auto=format&q=75&w=400" } },
-  { label: "Holiday Hole",        tag: "Read", description: "You paid us to dig a big hole.",           href: "#", image: { url: "https://img.cah.io/images/vc07edlh/production/1acdec5a623b0761a127ac03492b998879ead549-680x680.png?auto=format&q=75&w=400" } },
-];
 const FALLBACK_BUY_CARDS = [
   { label: "America's #1\ngerbil coffin.",  cta: "Buy Now",           href: "/products/more-cah", backgroundColor: "#87CEEB", darkBackground: false },
   { label: "Play CAH\nwith your kids.",     cta: "Buy Family Edition", href: "#",                  backgroundColor: "#FFE135", darkBackground: false },
@@ -93,8 +89,6 @@ const CAH_ICONS = [
   { src: "https://img.cah.io/images/vc07edlh/production/5c65c30fc763b717a6aeb4e3e31396dc1eff25cb-37x37.svg", w: 27, h: 27 },
   { src: "https://img.cah.io/images/vc07edlh/production/dcd9c155e28ce85538e4ee426bdac4c189e4bd3f-38x36.svg", w: 28, h: 26 },
 ];
-
-// Positions scattered around the edges matching the original site layout
 const ICON_POS: React.CSSProperties[] = [
   { top: "10%",  left:  "2.5%" },
   { top: "10%",  left:  "15%"  },
@@ -104,53 +98,28 @@ const ICON_POS: React.CSSProperties[] = [
   { bottom: "5%",  left:  "15%"  },
   { bottom: "5%",  right: "15%"  },
   { bottom: "10%", right: "2.5%" },
-  { top: "50%",  left:  "1%",    transform: "translateY(-50%)" },
+  { top: "50%",  left:  "1%", transform: "translateY(-50%)" },
 ];
+
+// ── SERVER-ONLY SECTIONS (no interactivity needed) ────────────────────────────
 
 function AboutSection({ cmsHome }: { cmsHome: any }) {
   const p1 = cmsHome?.about?.paragraph1 || "is a fill-in-the-blank party game that turns your awkward personality and lackluster social skills into hours of fun! Wow.";
   const p2 = cmsHome?.about?.paragraph2 || "The game is simple. Each round, one player asks a question from a black card, and everyone else answers with their funniest white card.";
-
   return (
     <section className="bg-white relative h-[85vh] overflow-hidden" style={{ padding: "112px 48px" }}>
-      {/* Real CAH icons scattered around the section */}
       {CAH_ICONS.map((icon, i) => (
-        <div
-          key={i}
-          className="absolute pointer-events-none select-none"
-          style={{ ...ICON_POS[i], opacity: 1 }}
-        >
+        <div key={i} className="absolute pointer-events-none select-none" style={{ ...ICON_POS[i], opacity: 1 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={icon.src}
-            alt=""
-            width={icon.w * 1.4}
-            height={icon.h * 1.4}
-            loading="lazy"
-            style={{ display: "block" }}
-          />
+          <img src={icon.src} alt="" width={icon.w * 1.4} height={icon.h * 1.4} loading="lazy" style={{ display: "block" }} />
         </div>
       ))}
-
       <div className="relative z-10 mx-auto mt-16 text-center" style={{ maxWidth: 820 }}>
-        <span
-          className="text-black font-black leading-relaxed"
-          style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.2 }}
-        >
-          {'Cards Against Humanity '}
+        <span className="text-black font-black leading-relaxed" style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.2 }}>
+          {"Cards Against Humanity "}
         </span>
-        <span
-          className="text-black leading-relaxed"
-          style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.5 }}
-        >
-          {p1}
-        </span>
-        <p
-          className="text-black leading-relaxed"
-          style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.5 }}
-        >
-          {p2}
-        </p>
+        <span className="text-black leading-relaxed" style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.5 }}>{p1}</span>
+        <p className="text-black leading-relaxed" style={{ fontSize: "clamp(1.4rem,2.5vw,1.9rem)", lineHeight: 1.5 }}>{p2}</p>
       </div>
     </section>
   );
@@ -196,56 +165,6 @@ function StealSection({ cmsHome }: { cmsHome: any }) {
   );
 }
 
-function StuffSection({ cmsHome, stuffPosts }: { cmsHome: any; stuffPosts: any[] }) {
-  const heading  = cmsHome?.stuffSection?.heading   || "Stuff we've done.";
-  const posts = stuffPosts.length ? stuffPosts : FALLBACK_STUFF;
-  return (
-    <section className="bg-black" style={{ padding: "80px 48px" }}>
-      <div className="flex items-start justify-between mb-10">
-        <h2 className="text-white font-black" style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2rem,5vw,3.2rem)", letterSpacing: "-0.02em" }}>{heading}</h2>
-        <div style={{ width: 86, height: 86, position: "relative", flexShrink: 0 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://img.cah.io/images/vc07edlh/production/6d7d67943605f882af1c5c779e5e77f7c23bb6a4-86x86.svg"
-            alt="More to come badge"
-            width={86}
-            height={86}
-            loading="lazy"
-            style={{ display: "block", width: "100%", height: "100%" }}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-3" style={{ gap: 12 }}>
-        {posts.map((post: any, i: number) => {
-          const imgUrl = post.image?.url ? cmsImg(post.image.url) : null;
-          return (
-            <a key={post.id ?? i} href={post.href || "#"} style={{ textDecoration: "none", aspectRatio: "1/1", display: "block", position: "relative" }}
-              className="rounded-2xl overflow-hidden group">
-              {imgUrl && (
-                <Image
-                  src={imgUrl}
-                  alt={post.label}
-                  fill
-                  unoptimized
-                  sizes="(max-width:768px) 100vw, 33vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-              )}
-              <div style={{ background: post.backgroundColor, color: post.textColor }} className="absolute inset-0 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <span className="text-white text-xs font-black tracking-[0.2em] uppercase opacity-60">{post.tag}</span>
-                <p className="text-white font-black text-xl mt-1" style={{ fontFamily: "Georgia, serif" }}>{post.label}</p>
-                <p className="text-white/75 mt-1" style={{ fontSize: "0.95rem" }}>{post.description}</p>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function FooterSection({ cmsHome }: { cmsHome: any }) {
   const copyright  = cmsHome?.footer?.copyright  || "©2026 Cards Against Humanity LLC";
   const shopLinks  = cmsHome?.footer?.shopLinks  || [{ label: "All Products", href: "#" },{ label: "Main Games", href: "#" },{ label: "Expansions", href: "#" },{ label: "Family", href: "#" },{ label: "Packs", href: "#" },{ label: "Other Stuff", href: "#" }];
@@ -271,7 +190,6 @@ function FooterSection({ cmsHome }: { cmsHome: any }) {
         <div>
           <p className="font-black text-black mb-2" style={{ fontSize: "1rem" }}>Email List</p>
           <p className="text-black mb-5" style={{ fontSize: "1rem", lineHeight: 1.5 }}>Sign up and we&apos;ll let you know first when we do anything:</p>
-          {/* Static form — no JS, no hydration cost */}
           <form className="flex items-center border-2 border-black rounded-lg overflow-hidden">
             <input type="email" name="email" placeholder="Email Address"
               className="flex-1 outline-none bg-white text-black placeholder-gray-400"
@@ -302,17 +220,15 @@ function FooterSection({ cmsHome }: { cmsHome: any }) {
 
 // ── ROOT SERVER PAGE ───────────────────────────────────────────────────────────
 export default async function Home() {
-  // Parallel server-side data fetch — runs at build/revalidate time
   const [cmsHome, { faqs, stuffPosts, buyCards, emailPhrases }] = await Promise.all([
     getCMSHome(),
     getCMSCollections(),
   ]);
 
-  // Merge CMS data with fallbacks
-  const quotes       = cmsHome?.hero?.quotes?.length ? cmsHome.hero.quotes       : FALLBACK_QUOTES;
-  const phrases      = emailPhrases.length            ? emailPhrases              : FALLBACK_PHRASES.map(p => ({ phrase: p }));
-  const faqItems     = faqs.length                    ? faqs                      : FALLBACK_FAQS;
-  const buyCardItems = buyCards.length                ? buyCards                  : FALLBACK_BUY_CARDS;
+  const quotes       = cmsHome?.hero?.quotes?.length ? cmsHome.hero.quotes : FALLBACK_QUOTES;
+  const phrases      = emailPhrases.length ? emailPhrases : FALLBACK_PHRASES.map(p => ({ phrase: p }));
+  const faqItems     = faqs.length         ? faqs         : FALLBACK_FAQS;
+  const buyCardItems = buyCards.length     ? buyCards     : FALLBACK_BUY_CARDS;
 
   return (
     <main>
@@ -324,7 +240,17 @@ export default async function Home() {
         faqItems={faqItems}
         aboutSlot={<AboutSection cmsHome={cmsHome} />}
         stealSlot={<StealSection cmsHome={cmsHome} />}
-        stuffSlot={<StuffSection cmsHome={cmsHome} stuffPosts={stuffPosts} />}
+        {/*
+          StuffSection is now a "use client" component imported from
+          @/components/StuffSection.tsx — it receives stuffPosts from the
+          server and handles hover state internally.
+        */}
+        stuffSlot={
+          <StuffSection
+            cmsHome={cmsHome}
+            stuffPosts={stuffPosts}
+          />
+        }
         footerSlot={<FooterSection cmsHome={cmsHome} />}
       />
     </main>
