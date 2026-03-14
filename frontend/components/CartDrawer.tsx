@@ -43,11 +43,24 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
 
   return (
     <>
-      {open && <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />}
       <div
-        className={`fixed top-0 right-0 h-full w-[380px] bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className="fixed inset-0 bg-black/20"
+        style={{
+          zIndex: 120,
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 0.36s ease",
+        }}
+        onClick={onClose}
+      />
+      <div
+        className="fixed top-0 right-0 h-full w-95 bg-white shadow-2xl flex flex-col"
+        style={{
+          zIndex: 121,
+          transform: open ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 0.56s cubic-bezier(0.22, 1, 0.36, 1)",
+          willChange: "transform",
+        }}
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
@@ -82,7 +95,7 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
             <div className="divide-y divide-gray-100">
               {items.map((item: any) => (
                 <div key={item.id} className="flex gap-4 py-4 items-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
                     {item.thumbnail && (
                       <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
                     )}
@@ -103,7 +116,7 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
                       >+</button>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right shrink-0">
                     <p className="font-bold text-black">${((item.unit_price || 0) / 100).toFixed(2)}</p>
                     <button
                       onClick={() => changeQty(item.id, 0)}

@@ -1,33 +1,132 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCartCtx } from "./CartProvider";
 import { CartIcon, ShopMegaMenu, AboutMegaMenu, MenuBackdrop } from "./MegaMenus";
 import Link from "next/link";
 
-export default function Navbar({ cmsHome }: { cmsHome: any }) {
-  const [vis, setVis] = useState(false);
-  const [shopOpen, setShopOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const { cartCount, setCartOpen } = useCartCtx();
+const MENU_CLOSE_MS = 440;
+const CART_TRANSITION_MS = 440;
+
+export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: unknown; alwaysVisible?: boolean }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<"shop" | "about" | null>(null);
+  const [renderedMenu, setRenderedMenu] = useState<"shop" | "about" | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { cartCount, cartOpen, setCartOpen } = useCartCtx();
 
   // Show navbar after scrolling
   useEffect(() => {
-    const fn = () => setVis(window.scrollY > window.innerHeight * 0.2);
+    if (alwaysVisible) return;
+
+    const fn = () => setIsScrolled(window.scrollY > window.innerHeight * 0.2);
     window.addEventListener("scroll", fn, { passive: true });
     fn();
     return () => window.removeEventListener("scroll", fn);
+  }, [alwaysVisible]);
+
+  const vis = alwaysVisible || isScrolled;
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
   }, []);
 
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const clearSwitchTimer = () => {
+    if (switchTimerRef.current) {
+      clearTimeout(switchTimerRef.current);
+      switchTimerRef.current = null;
+    }
+  };
+
+  const openMenu = (menu: "shop" | "about") => {
+    setRenderedMenu(menu);
+    setActiveMenu(menu);
+    setMenuVisible(false);
+
+    requestAnimationFrame(() => {
+      setMenuVisible(true);
+    });
+  };
+
   const closeAll = () => {
-    setShopOpen(false);
-    setAboutOpen(false);
+    clearCloseTimer();
+    clearSwitchTimer();
+    setActiveMenu(null);
+    setMenuVisible(false);
+    closeTimerRef.current = setTimeout(() => {
+      setRenderedMenu(null);
+      closeTimerRef.current = null;
+    }, MENU_CLOSE_MS);
+  };
+
+  const toggleMenu = (menu: "shop" | "about") => {
+    if (activeMenu === menu && menuVisible) {
+      closeAll();
+      return;
+    }
+
+    clearCloseTimer();
+    clearSwitchTimer();
+
+    if (cartOpen) {
+      setCartOpen(false);
+      switchTimerRef.current = setTimeout(() => {
+        switchTimerRef.current = null;
+        openMenu(menu);
+      }, CART_TRANSITION_MS);
+      return;
+    }
+
+    if (activeMenu && activeMenu !== menu && menuVisible) {
+      setActiveMenu(null);
+      setMenuVisible(false);
+      switchTimerRef.current = setTimeout(() => {
+        switchTimerRef.current = null;
+        openMenu(menu);
+      }, MENU_CLOSE_MS);
+      return;
+    }
+
+    openMenu(menu);
+  };
+
+  const toggleCart = () => {
+    clearCloseTimer();
+    clearSwitchTimer();
+
+    if (cartOpen) {
+      setCartOpen(false);
+      return;
+    }
+
+    if (activeMenu && menuVisible) {
+      setActiveMenu(null);
+      setMenuVisible(false);
+      switchTimerRef.current = setTimeout(() => {
+        setRenderedMenu(null);
+        switchTimerRef.current = null;
+        setCartOpen(true);
+      }, MENU_CLOSE_MS);
+      return;
+    }
+
+    setCartOpen(true);
   };
 
   const chevron = (open: boolean) => (
     <svg
-      width="14"
-      height="9"
+      width="18"
+      height="12"
       viewBox="0 0 14 9"
       fill="currentColor"
       style={{
@@ -43,15 +142,15 @@ export default function Navbar({ cmsHome }: { cmsHome: any }) {
   return (
     <>
       {/* Backdrop */}
-      {(shopOpen || aboutOpen) && <MenuBackdrop onClose={closeAll} />}
+      {renderedMenu && <MenuBackdrop onClose={closeAll} visible={menuVisible} />}
 
       {/* Mega menus */}
-      {shopOpen && <ShopMegaMenu onClose={closeAll} />}
-      {aboutOpen && <AboutMegaMenu onClose={closeAll} cmsHome={cmsHome} />}
+      {renderedMenu === "shop" && <ShopMegaMenu onClose={closeAll} visible={menuVisible} />}
+      {renderedMenu === "about" && <AboutMegaMenu onClose={closeAll} cmsHome={cmsHome} visible={menuVisible} />}
 
       {/* Navbar */}
       <nav
-        className="fixed top-0 left-0 right-0 z-[101] bg-black text-white"
+        className="fixed top-0 left-0 right-0 z-101 bg-black text-white"
         style={{
           height: "72px",
           padding: "0 40px",
@@ -83,32 +182,23 @@ export default function Navbar({ cmsHome }: { cmsHome: any }) {
             <button
               className="flex items-center gap-1 hover:opacity-70 transition-opacity"
               style={{ fontSize: "28px", fontWeight: 800 }}
-              onClick={() => {
-                setShopOpen((o) => !o);
-                setAboutOpen(false);
-              }}
+              onClick={() => toggleMenu("shop")}
             >
-              Shop {chevron(shopOpen)}
+              Shop {chevron(activeMenu === "shop" && menuVisible)}
             </button>
 
             {/* About */}
             <button
               className="flex items-center gap-1 hover:opacity-70 transition-opacity"
               style={{ fontSize: "28px", fontWeight: 800 }}
-              onClick={() => {
-                setAboutOpen((o) => !o);
-                setShopOpen(false);
-              }}
+              onClick={() => toggleMenu("about")}
             >
-              About {chevron(aboutOpen)}
+              About {chevron(activeMenu === "about" && menuVisible)}
             </button>
 
             {/* Cart */}
             <button
-              onClick={() => {
-                closeAll();
-                setCartOpen(true);
-              }}
+              onClick={toggleCart}
               className="relative flex items-center hover:opacity-70 transition-opacity"
               aria-label="Open cart"
             >

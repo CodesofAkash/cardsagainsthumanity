@@ -122,9 +122,9 @@ function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
         // CMS rotation value (degrees) — becomes the CSS variable center point
         const baseRot = entry.rotation ?? 0;
         // Stagger animation start per image so they don't all move in sync
-        const delay = idx * 1.8;
-        // Duration varies slightly per image for organic feel
-        const duration = 8 + idx * 2.5;
+        const delay = idx * 1.2;
+        // Slightly faster idle tilt, while keeping per-image variation
+        const duration = 6.2 + idx * 1.7;
 
         return (
           <div
@@ -138,9 +138,9 @@ function BuyCardItem({ card, isCenter }: { card: BuyCard; isCenter: boolean }) {
               zIndex:        entry.zIndex ?? (10 - idx),
               pointerEvents: "none",
               // CSS custom properties used by the keyframe animation
-              ["--base-rot" as any]:   `${baseRot}deg`,
+              ["--base-rot" as never]: `${baseRot}deg`,
               // Scale: 1 normally, 1.07 on hover — CSS var picked up by keyframe
-              ["--img-scale" as any]:  hovered ? "1.07" : "1",
+              ["--img-scale" as never]: hovered ? "1.07" : "1",
               animation: `cahTilt ${duration}s ease-in-out ${delay}s infinite`,
             }}
           >
@@ -247,6 +247,12 @@ export default function BuySection({
     slideChanged(s) {
       setCurrentSlide(s.track.details.rel);
     },
+    dragStarted() {
+      pauseAuto();
+    },
+    dragEnded() {
+      resumeAuto();
+    },
   });
 
   const scheduleAuto = () => {
@@ -286,10 +292,6 @@ export default function BuySection({
       <div
         ref={sliderRef}
         className="keen-slider"
-        onMouseEnter={pauseAuto}
-        onMouseLeave={resumeAuto}
-        onTouchStart={pauseAuto}
-        onTouchEnd={resumeAuto}
       >
         {cards.map((card, i) => (
           <div

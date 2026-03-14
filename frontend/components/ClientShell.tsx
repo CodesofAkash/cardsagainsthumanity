@@ -73,7 +73,9 @@ function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSl
         <HeroSection
           quotes={quotes}
           cartCount={cartCount}
+          cartOpen={cartOpen}
           onCartOpen={() => setCartOpen(true)}
+          onCartClose={() => setCartOpen(false)}
           cmsHome={cmsHome}
         />
       </Suspense>

@@ -4,15 +4,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  useCart,
   getOrCreateCart,
   fetchCartById,
   medusaHeaders,
   MEDUSA_URL,
 } from "@/hooks/useCart";
+import CartProvider, { useCartCtx } from "@/components/CartProvider";
 import CartDrawer from "@/components/CartDrawer";
 import CheckoutDrawer from "@/components/CheckoutDrawer";
-import { CartIcon } from "@/components/MegaMenus";
+import Navbar from "@/components/Navbar";
 
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
 
@@ -429,73 +429,6 @@ function RelatedProducts({
   );
 }
 
-/* ─── Navbar ─────────────────────────────────────────────────────────── */
-function Navbar({ cartCount, onCartOpen }: { cartCount: number; onCartOpen: () => void }) {
-  const [shopOpen, setShopOpen]   = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-
-  useEffect(() => {
-    const close = () => { setShopOpen(false); setAboutOpen(false); };
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, []);
-
-  const chevron = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M7 10l5 5 5-5z" />
-    </svg>
-  );
-
-  return (
-    <nav className="bg-black sticky top-0 z-30 flex items-center justify-between"
-      style={{ padding: "18px 40px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-      <Link href="/" className="text-white font-black hover:opacity-80"
-        style={{ fontSize: "1.25rem", textDecoration: "none" }}>
-        Cards Against Humanity
-      </Link>
-      <div className="flex items-center" style={{ gap: 48 }}>
-        <div className="relative" onClick={e => e.stopPropagation()}>
-          <button className="text-white font-black flex items-center gap-1.5 hover:opacity-70 bg-transparent border-none cursor-pointer"
-            style={{ fontSize: "1.35rem" }}
-            onClick={() => { setShopOpen(o => !o); setAboutOpen(false); }}>
-            Shop {chevron}
-          </button>
-          {shopOpen && (
-            <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl py-2 z-50" style={{ minWidth: 220 }}>
-              {["All Products","Main Games","Expansions","Family","Packs","Other Stuff"].map(x => (
-                <a key={x} href="#" className="block px-6 py-2.5 hover:bg-gray-50 font-black text-base text-black"
-                  style={{ textDecoration: "none" }}>{x}</a>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative" onClick={e => e.stopPropagation()}>
-          <button className="text-white font-black flex items-center gap-1.5 hover:opacity-70 bg-transparent border-none cursor-pointer"
-            style={{ fontSize: "1.35rem" }}
-            onClick={() => { setAboutOpen(o => !o); setShopOpen(false); }}>
-            About {chevron}
-          </button>
-          {aboutOpen && (
-            <div className="absolute top-full right-0 mt-3 bg-white rounded-2xl shadow-2xl py-2 z-50" style={{ minWidth: 220 }}>
-              {["Our Story","Team","Press","Careers","Contact"].map(x => (
-                <a key={x} href="#" className="block px-6 py-2.5 hover:bg-gray-50 font-black text-base text-black"
-                  style={{ textDecoration: "none" }}>{x}</a>
-              ))}
-            </div>
-          )}
-        </div>
-        <button
-          className="relative flex items-center hover:opacity-70 transition-opacity bg-transparent border-none cursor-pointer text-white"
-          aria-label="Open cart" onClick={onCartOpen}
-          style={{ gap: 8, fontSize: "1.2rem", fontWeight: 900 }}>
-          <CartIcon />
-          <span>\{cartCount}/</span>
-        </button>
-      </div>
-    </nav>
-  );
-}
-
 /* ─── Footer ─────────────────────────────────────────────────────────── */
 function Footer() {
   const cols = [
@@ -548,6 +481,14 @@ function Footer() {
    MAIN PRODUCT PAGE
 ════════════════════════════════════════════════════════════════════════ */
 export default function ProductPage() {
+  return (
+    <CartProvider>
+      <ProductPageContent />
+    </CartProvider>
+  );
+}
+
+function ProductPageContent() {
   useInjectStyle("cah-product-anim", INJECT_CSS);
 
   const params = useParams();
@@ -558,8 +499,8 @@ export default function ProductPage() {
   const [adding,  setAdding]  = useState(false);
   const [added,   setAdded]   = useState(false);
 
-  const { cartData, cartCount, cartOpen, checkoutOpen,
-          setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCart();
+  const { cartData, cartOpen, checkoutOpen,
+          setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCartCtx();
 
   useEffect(() => {
     setLoading(true);
@@ -609,8 +550,8 @@ export default function ProductPage() {
   );
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar cartCount={cartCount} onCartOpen={() => setCartOpen(true)} />
+    <div className="min-h-screen bg-black" style={{ paddingTop: 72 }}>
+      <Navbar cmsHome={null} alwaysVisible />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)}
         cartData={cartData} onCartUpdate={updateCart}
         onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} />

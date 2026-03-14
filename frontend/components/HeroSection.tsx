@@ -3,6 +3,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { CartIcon, ShopMegaMenu, AboutMegaMenu, MenuBackdrop } from "./MegaMenus";
 
 let gsapInstance: any = null;
+const MENU_CLOSE_MS = 440;
+const CART_TRANSITION_MS = 440;
+
 async function getGSAP() {
   if (gsapInstance) return gsapInstance;
   const mod = await import("gsap");
@@ -71,7 +74,7 @@ function CardFront({ text }: { text: string }) {
         {text}
       </p>
       <div className="flex items-center gap-2 opacity-40">
-        <div className="rounded-sm border-2 border-black flex-shrink-0" style={{ width: 20, height: 20 }} />
+        <div className="rounded-sm border-2 border-black shrink-0" style={{ width: 20, height: 20 }} />
         <span className="font-black tracking-wide" style={{ fontSize: "0.65rem" }}>Cards Against Humanity</span>
       </div>
     </div>
@@ -101,7 +104,7 @@ function CardBack() {
         Cards<br />Against<br />Humanity
       </p>
       <div className="flex items-center gap-2 opacity-40">
-        <div className="rounded-sm border-2 border-black flex-shrink-0" style={{ width: 20, height: 20 }} />
+        <div className="rounded-sm border-2 border-black shrink-0" style={{ width: 20, height: 20 }} />
         <span className="font-black tracking-wide" style={{ fontSize: "0.65rem" }}>Cards Against Humanity</span>
       </div>
     </div>
@@ -144,7 +147,7 @@ function BlackCard({ text }: { text: string }) {
         {text}
       </p>
       <div className="flex items-center gap-2 opacity-40 text-white">
-        <div className="rounded-sm border-2 border-white flex-shrink-0" style={{ width: 20, height: 20 }} />
+        <div className="rounded-sm border-2 border-white shrink-0" style={{ width: 20, height: 20 }} />
         <span className="font-black tracking-wide" style={{ fontSize: "0.65rem" }}>Cards Against Humanity</span>
       </div>
     </div>
@@ -198,7 +201,9 @@ function WordmarkSVG() {
 interface HeroSectionProps {
   quotes: { quote: string; source: string }[];
   cartCount?: number;
+  cartOpen?: boolean;
   onCartOpen?: () => void;
+  onCartClose?: () => void;
   cmsHome?: any;
 }
 
@@ -208,7 +213,9 @@ const AUTO_CYCLE_MS = 10_000;
 export default function HeroSection({
   quotes,
   cartCount = 0,
+  cartOpen = false,
   onCartOpen = () => {},
+  onCartClose = () => {},
   cmsHome,
 }: HeroSectionProps) {
   const blackRef  = useRef<HTMLDivElement>(null);
@@ -227,13 +234,108 @@ export default function HeroSection({
 
   const [setIdx,    setSetIdx]   = useState(0);
   const [quoteIdx,  setQuoteIdx] = useState(0);
-  const [shopOpen,  setShopOpen]  = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<"shop" | "about" | null>(null);
+  const [renderedMenu, setRenderedMenu] = useState<"shop" | "about" | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // flipped[i] = true means that card shows its back face
   const [flipped, setFlipped] = useState<boolean[]>(Array(6).fill(false));
 
   const clearTimer = () => { if (timer.current) clearTimeout(timer.current); };
-  const closeAll   = () => { setShopOpen(false); setAboutOpen(false); };
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const clearSwitchTimer = () => {
+    if (switchTimerRef.current) {
+      clearTimeout(switchTimerRef.current);
+      switchTimerRef.current = null;
+    }
+  };
+
+  const openMenu = (menu: "shop" | "about") => {
+    setRenderedMenu(menu);
+    setActiveMenu(menu);
+    setMenuVisible(false);
+
+    requestAnimationFrame(() => {
+      setMenuVisible(true);
+    });
+  };
+
+  const closeAll = () => {
+    clearCloseTimer();
+    clearSwitchTimer();
+    setActiveMenu(null);
+    setMenuVisible(false);
+    closeTimerRef.current = setTimeout(() => {
+      setRenderedMenu(null);
+      closeTimerRef.current = null;
+    }, MENU_CLOSE_MS);
+  };
+
+  const toggleMenu = (menu: "shop" | "about") => {
+    if (activeMenu === menu && menuVisible) {
+      closeAll();
+      return;
+    }
+
+    clearCloseTimer();
+    clearSwitchTimer();
+
+    if (cartOpen) {
+      onCartClose();
+      switchTimerRef.current = setTimeout(() => {
+        switchTimerRef.current = null;
+        openMenu(menu);
+      }, CART_TRANSITION_MS);
+      return;
+    }
+
+    if (activeMenu && activeMenu !== menu && menuVisible) {
+      setActiveMenu(null);
+      setMenuVisible(false);
+      switchTimerRef.current = setTimeout(() => {
+        switchTimerRef.current = null;
+        openMenu(menu);
+      }, MENU_CLOSE_MS);
+      return;
+    }
+
+    openMenu(menu);
+  };
+
+  const toggleCart = () => {
+    clearCloseTimer();
+    clearSwitchTimer();
+
+    if (cartOpen) {
+      onCartClose();
+      return;
+    }
+
+    if (activeMenu && menuVisible) {
+      setActiveMenu(null);
+      setMenuVisible(false);
+      switchTimerRef.current = setTimeout(() => {
+        setRenderedMenu(null);
+        switchTimerRef.current = null;
+        onCartOpen();
+      }, MENU_CLOSE_MS);
+      return;
+    }
+
+    onCartOpen();
+  };
+
+  useEffect(() => () => {
+    clearCloseTimer();
+    clearSwitchTimer();
+  }, []);
 
   /* ── fly everything up, advance to next set ─────────────────────── */
   const flyUpNext = useCallback(async () => {
@@ -447,7 +549,7 @@ export default function HeroSection({
   const btnCls   = "text-white font-black flex items-center gap-1 bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity";
   const btnStyle: React.CSSProperties = { fontSize: "clamp(1.1rem,1.5vw,1.4rem)", fontFamily: "inherit" };
   const chevron  = (open: boolean) => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"
       style={{ marginTop: 2, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
       <path d="M7 10l5 5 5-5z" />
     </svg>
@@ -455,9 +557,9 @@ export default function HeroSection({
 
   return (
     <>
-      {(shopOpen || aboutOpen) && <MenuBackdrop onClose={closeAll} />}
-      {shopOpen  && <ShopMegaMenu  onClose={closeAll} />}
-      {aboutOpen && <AboutMegaMenu onClose={closeAll} cmsHome={cmsHome} />}
+      {renderedMenu && <MenuBackdrop onClose={closeAll} visible={menuVisible} />}
+      {renderedMenu === "shop" && <ShopMegaMenu onClose={closeAll} visible={menuVisible} />}
+      {renderedMenu === "about" && <AboutMegaMenu onClose={closeAll} cmsHome={cmsHome} visible={menuVisible} />}
 
       <section className="relative w-full bg-black overflow-hidden" style={{ height: "100svh", minHeight: 620 }}>
 
@@ -467,17 +569,17 @@ export default function HeroSection({
         </div>
 
         {/* Nav — starts opacity:0, GSAP drops it in */}
-        <div ref={navRef} className="absolute top-8 right-8 z-[102] flex items-center gap-10" style={{ opacity: 0 }}>
+        <div ref={navRef} className="absolute top-8 right-8 z-102 flex items-center gap-10" style={{ opacity: 0 }}>
           <button className={btnCls} style={btnStyle}
-            onClick={() => { setShopOpen(o => !o); setAboutOpen(false); }}>
-            Shop {chevron(shopOpen)}
+            onClick={() => toggleMenu("shop")}>
+            Shop {chevron(activeMenu === "shop" && menuVisible)}
           </button>
           <button className={btnCls} style={btnStyle}
-            onClick={() => { setAboutOpen(o => !o); setShopOpen(false); }}>
-            About {chevron(aboutOpen)}
+            onClick={() => toggleMenu("about")}>
+            About {chevron(activeMenu === "about" && menuVisible)}
           </button>
           <button
-            onClick={() => { closeAll(); onCartOpen(); }}
+            onClick={toggleCart}
             className="relative flex items-center hover:opacity-70 transition-opacity"
             aria-label="Open cart"
           >

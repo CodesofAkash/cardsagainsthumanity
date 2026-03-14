@@ -56,6 +56,10 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   const stepRef   = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const animRef   = useRef(false);
+  const cardNumberRef = useRef<HTMLInputElement>(null);
+  const expiryRef = useRef<HTMLInputElement>(null);
+  const cvcRef = useRef<HTMLInputElement>(null);
+  const zipRef = useRef<HTMLInputElement>(null);
 
   const [country, setCountry] = useState("India");
   const [addr, setAddr] = useState({ full_name:"", street:"", unit:"", city:"", state:"", postal:"" });
@@ -70,6 +74,32 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   const cartId   = cartData?.cart?.id;
   const subtotal = cartData?.cart?.subtotal || 0;
   const cc = (c: string) => COUNTRY_CODES[c] || c.slice(0,2).toLowerCase();
+
+  function handleCardNumberChange(raw: string) {
+    const formatted = formatCardNumber(raw);
+    const digits = formatted.replace(/\D/g, "");
+    setCard((c) => ({ ...c, number: formatted }));
+    if (digits.length === 16) expiryRef.current?.focus();
+  }
+
+  function handleExpiryChange(raw: string) {
+    const formatted = formatExpiry(raw);
+    const digits = formatted.replace(/\D/g, "");
+    setCard((c) => ({ ...c, expiry: formatted }));
+    if (digits.length === 4) cvcRef.current?.focus();
+  }
+
+  function handleCvcChange(raw: string) {
+    const nextCvc = raw.replace(/\D/g, "").slice(0, 4);
+    const numberDigits = card.number.replace(/\D/g, "");
+    const cvcLength = /^3[47]/.test(numberDigits) ? 4 : 3;
+    setCard((c) => ({ ...c, cvc: nextCvc }));
+    if (nextCvc.length === cvcLength) zipRef.current?.focus();
+  }
+
+  function handleZipChange(raw: string) {
+    setCard((c) => ({ ...c, postal: raw.slice(0, 10) }));
+  }
 
   // ── Drawer GSAP ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -275,12 +305,12 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
   return (
     <>
-      {open && <div className="fixed inset-0 bg-black/60 z-50" onClick={onClose} />}
+      {open && <div className="fixed inset-0 bg-black/60" style={{ zIndex: 120 }} onClick={onClose} />}
 
       <div
         ref={drawerRef}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl"
-        style={{ transform:"translateY(100%)" }}
+        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl"
+        style={{ transform:"translateY(100%)", zIndex: 121 }}
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
@@ -439,38 +469,45 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
                 <div className="relative mb-3">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none select-none text-base">💳</span>
                   <input
+                    ref={cardNumberRef}
                     placeholder="1234 5678 9012 3456"
                     value={card.number}
-                    onChange={(e) => setCard((c) => ({ ...c, number: formatCardNumber(e.target.value) }))}
+                    onChange={(e) => handleCardNumberChange(e.target.value)}
                     maxLength={19}
                     className={`${inputCls} pl-10 text-left tracking-widest`}
                     autoComplete="off"
+                    inputMode="numeric"
                   />
                 </div>
 
                 {/* Expiry / CVC / ZIP */}
                 <div className="grid grid-cols-3 gap-2 mb-5">
                   <input
+                    ref={expiryRef}
                     placeholder="MM / YY"
                     value={card.expiry}
-                    onChange={(e) => setCard((c) => ({ ...c, expiry: formatExpiry(e.target.value) }))}
+                    onChange={(e) => handleExpiryChange(e.target.value)}
                     maxLength={7}
                     className={`${inputCls} tracking-wider`}
                     autoComplete="off"
+                    inputMode="numeric"
                   />
                   <input
+                    ref={cvcRef}
                     placeholder="CVC"
                     value={card.cvc}
-                    onChange={(e) => setCard((c) => ({ ...c, cvc: e.target.value.replace(/\D/g,"").slice(0,4) }))}
+                    onChange={(e) => handleCvcChange(e.target.value)}
                     maxLength={4}
                     className={inputCls}
                     autoComplete="off"
                     type="password"
+                    inputMode="numeric"
                   />
                   <input
+                    ref={zipRef}
                     placeholder="ZIP"
                     value={card.postal}
-                    onChange={(e) => setCard((c) => ({ ...c, postal: e.target.value.slice(0,10) }))}
+                    onChange={(e) => handleZipChange(e.target.value)}
                     className={inputCls}
                     autoComplete="off"
                   />
