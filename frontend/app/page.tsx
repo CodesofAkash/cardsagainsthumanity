@@ -240,11 +240,6 @@ export default async function Home() {
         faqItems={faqItems}
         aboutSlot={<AboutSection cmsHome={cmsHome} />}
         stealSlot={<StealSection cmsHome={cmsHome} />}
-        {/*
-          StuffSection is now a "use client" component imported from
-          @/components/StuffSection.tsx — it receives stuffPosts from the
-          server and handles hover state internally.
-        */}
         stuffSlot={
           <StuffSection
             cmsHome={cmsHome}
