@@ -36,12 +36,12 @@ const Products: CollectionConfig = {
     {
       name: 'medusaId',
       type: 'text',
-      admin: { description: 'Auto-filled: Medusa product ID' },
+      admin: { description: 'Medusa product ID. Get this from Medusa admin → Products → [product] → Variants.' },
     },
     {
       name: 'variantId',
       type: 'text',
-      admin: { description: 'Auto-filled: Medusa variant ID' },
+      admin: { description: 'Medusa variant ID. Get this from Medusa admin → Products → [product] → Variants.' },
     },
   ],
 

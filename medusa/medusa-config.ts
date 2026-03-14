@@ -2,7 +2,9 @@ import { defineConfig } from "@medusajs/framework/utils";
 
 export default defineConfig({
   projectConfig: {
-    databaseUrl: process.env.DATABASE_URL ?? "postgresql://placeholder:placeholder@localhost:5432/placeholder",
+    databaseUrl:
+      process.env.DATABASE_URL ??
+      "postgresql://placeholder:placeholder@localhost:5432/placeholder",
     http: {
       storeCors:    process.env.STORE_CORS    ?? "http://localhost:3000",
       adminCors:    process.env.ADMIN_CORS    ?? "http://localhost:9000",

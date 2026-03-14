@@ -205,11 +205,11 @@ export interface Product {
       }[]
     | null;
   /**
-   * Auto-filled: Medusa product ID
+   * Medusa product ID. Get this from Medusa admin → Products → [product] → Variants.
    */
   medusaId?: string | null;
   /**
-   * Auto-filled: Medusa variant ID
+   * Medusa variant ID. Get this from Medusa admin → Products → [product] → Variants.
    */
   variantId?: string | null;
   updatedAt: string;
