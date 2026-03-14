@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { ElementType } from "react";
 
 /* ══════════════════════════════════════════════════════════════════
    LEXICAL RICH TEXT RENDERER
@@ -65,7 +66,7 @@ function RichText({ content }: { content: any }) {
 
     // ── Headings ──────────────────────────────────────────────────
     if (node.type === "heading") {
-      const Tag = (node.tag ?? "h3") as keyof JSX.IntrinsicElements;
+      const Tag = (node.tag ?? "h3") as ElementType;
       return (
         <Tag key={idx} style={{ margin: "0.5em 0", fontWeight: 900 }}>
           {node.children?.map(renderNode)}
