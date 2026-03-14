@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import {
   useCart,
   getOrCreateCart,
@@ -23,7 +22,14 @@ function cmsImg(url?: string) {
   return `${CMS_URL}${url}`;
 }
 
-/* ─── inject CSS for starburst oscillation & image viewer ─────────────── */
+/* ─── CAH sticker images — 3 unique ones, cycled per product ─────────── */
+const CAH_STICKERS = [
+  "https://cdn.sanity.io/images/vc07edlh/production/d98a87617638bf60abb3bd34aae39e710f2ec718-81x81.svg",
+  "https://cdn.sanity.io/images/vc07edlh/production/d798a01794503606266a78a74409f913cc586da6-80x81.svg",
+  "https://cdn.sanity.io/images/vc07edlh/production/0d3c92b84597615cbf086163fff344e68e2e2359-80x81.svg",
+];
+
+/* ─── inject CSS ─────────────────────────────────────────────────────── */
 const INJECT_CSS = `
   @keyframes cahBadgeSpin {
     0%   { transform: rotate(-6deg); }
@@ -35,13 +41,14 @@ const INJECT_CSS = `
     to   { transform: translateX(0);   opacity: 1; }
   }
   @keyframes cahImgSlideOut {
-    from { transform: translateX(0);   opacity: 1; }
+    from { transform: translateX(0);    opacity: 1; }
     to   { transform: translateX(-60px); opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
     .cah-badge-spin { animation: none !important; }
   }
 `;
+
 function useInjectStyle(id: string, css: string) {
   useEffect(() => {
     if (document.getElementById(id)) return;
@@ -52,7 +59,7 @@ function useInjectStyle(id: string, css: string) {
   }, [id, css]);
 }
 
-/* ─── Plus icons ────────────────────────────────────────────────────────── */
+/* ─── PlusIcons ──────────────────────────────────────────────────────── */
 function PlusIcons() {
   const positions: React.CSSProperties[] = [
     { top: "9%",  left: "6%" }, { top: "28%", left: "3%" },
@@ -73,7 +80,7 @@ function PlusIcons() {
   );
 }
 
-/* ─── Starburst badge — oscillates ─────────────────────────────────────── */
+/* ─── StarburstBadge ─────────────────────────────────────────────────── */
 function StarburstBadge({ text, size = 80 }: { text: string; size?: number }) {
   const n = 16, cx = size / 2, cy = size / 2, oR = cx - 2, iR = cx - 10;
   let d = "";
@@ -84,20 +91,18 @@ function StarburstBadge({ text, size = 80 }: { text: string; size?: number }) {
   }
   d += "Z";
   return (
-    <div
-      className="cah-badge-spin"
-      style={{
-        width: size, height: size, position: "relative", flexShrink: 0,
-        animation: "cahBadgeSpin 3s ease-in-out infinite",
-        transformOrigin: "center",
-      }}
-    >
+    <div className="cah-badge-spin" style={{
+      width: size, height: size, position: "relative", flexShrink: 0,
+      animation: "cahBadgeSpin 3s ease-in-out infinite",
+      transformOrigin: "center",
+    }}>
       <svg width={size} height={size} style={{ position: "absolute" }}>
         <path d={d} fill="white" />
       </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }}>
+      <div style={{ position: "absolute", inset: 0, display: "flex",
+        alignItems: "center", justifyContent: "center", padding: 6 }}>
         <span className="font-black text-black text-center leading-tight"
-          style={{ fontSize: size * 0.155, letterSpacing: "-0.01em" }}>
+          style={{ fontSize: size * 0.155 }}>
           {text}
         </span>
       </div>
@@ -105,13 +110,8 @@ function StarburstBadge({ text, size = 80 }: { text: string; size?: number }) {
   );
 }
 
-/* ─── Floating image viewer (bottom-left thumbnail strip) ───────────────
-   - Shows images as small thumbnails in a row at bottom-left
-   - Clicking a thumbnail expands it into the overlay panel
-   - Panel has ←/→ arrows, HIDE button
-   - Images slide left/right with CSS animation
-─────────────────────────────────────────────────────────────────────────── */
-function ImageViewer({ images, mainImage }: { images: string[]; mainImage: string }) {
+/* ─── ImageViewer ────────────────────────────────────────────────────── */
+function ImageViewer({ images }: { images: string[] }) {
   const [open, setOpen]       = useState(false);
   const [viewIdx, setViewIdx] = useState(0);
   const [sliding, setSliding] = useState<"in" | "out" | null>(null);
@@ -122,8 +122,7 @@ function ImageViewer({ images, mainImage }: { images: string[]; mainImage: strin
     setTimeout(() => {
       setViewIdx(i => dir === "next"
         ? (i + 1) % images.length
-        : (i - 1 + images.length) % images.length
-      );
+        : (i - 1 + images.length) % images.length);
       imgKey.current++;
       setSliding("in");
       setTimeout(() => setSliding(null), 400);
@@ -134,74 +133,53 @@ function ImageViewer({ images, mainImage }: { images: string[]; mainImage: strin
 
   return (
     <>
-      {/* Thumbnail strip — bottom left of hero */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {images.map((src, i) => (
           <button key={i} onClick={() => { setViewIdx(i); setOpen(true); }}
-            style={{
-              width: 68, height: 68,
-              border: "2px solid rgba(255,255,255,0.25)",
-              borderRadius: 10, overflow: "hidden",
-              background: "#111", flexShrink: 0, cursor: "pointer",
-              transition: "border-color 0.2s",
-            }}
+            style={{ width: 68, height: 68, border: "2px solid rgba(255,255,255,0.25)",
+              borderRadius: 10, overflow: "hidden", background: "#111", flexShrink: 0, cursor: "pointer",
+              transition: "border-color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = "white")}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)")}
-          >
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)")}>
             <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </button>
         ))}
       </div>
-
-      {/* Expanded viewer panel */}
       {open && (
         <div style={{
-          position: "absolute",
-          bottom: 0, left: 0,
+          position: "absolute", bottom: 0, left: 0,
           width: "clamp(320px,42vw,520px)",
-          background: "#fff",
-          borderRadius: "0 16px 0 0",
-          zIndex: 50,
-          overflow: "hidden",
-          boxShadow: "0 -4px 40px rgba(0,0,0,0.6)",
+          background: "#fff", borderRadius: "0 16px 0 0", zIndex: 50,
+          overflow: "hidden", boxShadow: "0 -4px 40px rgba(0,0,0,0.6)",
         }}>
-          {/* Top bar */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
             <button onClick={() => setOpen(false)}
               style={{ display: "flex", alignItems: "center", gap: 6, background: "none",
                 border: "1.5px solid #000", borderRadius: 9999, padding: "6px 14px",
-                fontWeight: 900, fontSize: "0.85rem", cursor: "pointer", letterSpacing: "-0.01em" }}>
+                fontWeight: 900, fontSize: "0.85rem", cursor: "pointer" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
               </svg>
               HIDE
             </button>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => navigate("prev")}
-                style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #000",
-                  background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-              </button>
-              <button onClick={() => navigate("next")}
-                style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #000",
-                  background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <polyline points="9 18 15 12 9 6"/>
-                </svg>
-              </button>
+              {(["prev","next"] as const).map(dir => (
+                <button key={dir} onClick={() => navigate(dir)}
+                  style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #000",
+                    background: "none", cursor: "pointer", display: "flex",
+                    alignItems: "center", justifyContent: "center" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <polyline points={dir === "prev" ? "15 18 9 12 15 6" : "9 18 15 12 9 6"} />
+                  </svg>
+                </button>
+              ))}
             </div>
           </div>
-
-          {/* Image display */}
           <div style={{ height: "clamp(280px,35vw,420px)", display: "flex", alignItems: "center",
             justifyContent: "center", background: "#fff", padding: 24, overflow: "hidden" }}>
-            <img
-              key={imgKey.current}
-              src={images[viewIdx]}
-              alt=""
+            <img key={imgKey.current} src={images[viewIdx]} alt=""
               style={{
                 maxHeight: "100%", maxWidth: "100%", objectFit: "contain",
                 animation: sliding === "in"
@@ -209,8 +187,7 @@ function ImageViewer({ images, mainImage }: { images: string[]; mainImage: strin
                   : sliding === "out"
                     ? "cahImgSlideOut 0.22s ease forwards"
                     : "none",
-              }}
-            />
+              }} />
           </div>
         </div>
       )}
@@ -218,11 +195,26 @@ function ImageViewer({ images, mainImage }: { images: string[]; mainImage: strin
   );
 }
 
-/* ─── Related product card — hover: scale + tilt + extra images fly out ─── */
+/* ════════════════════════════════════════════════════════════════════════
+   RELATED PRODUCT CARD
+   — Specific CAH stickers fly out on hover
+   — Stickers follow mouse movement direction (parallax offset)
+════════════════════════════════════════════════════════════════════════ */
+// Sticker positions relative to card (as % offsets)
+const STICKER_SLOTS = [
+  { top: "8%",  left: "-14%", rotation: -25, scale: 1.1 },
+  { top: "45%", left: "-18%", rotation: 18,  scale: 0.95 },
+  { top: "10%", right: "-14%",rotation: 22,  scale: 1.05 },
+];
+
 function RelatedProductCard({
-  product, onCartUpdate, onCartOpen,
+  product,
+  stickerIdx,   // which sticker image to use (0,1,2) — cycles per card
+  onCartUpdate,
+  onCartOpen,
 }: {
   product: any;
+  stickerIdx: number;
   onCartUpdate: (d: any) => void;
   onCartOpen: () => void;
 }) {
@@ -230,15 +222,28 @@ function RelatedProductCard({
   const [adding,  setAdding]  = useState(false);
   const [added,   setAdded]   = useState(false);
 
+  // Mouse position relative to card center — for parallax
+  const [mouseOff, setMouseOff] = useState({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const stickerSrc = CAH_STICKERS[stickerIdx % CAH_STICKERS.length];
+
   const images: string[] = (product.images ?? [])
     .map((img: any) => img.image?.url ? cmsImg(img.image.url) : "")
     .filter(Boolean);
-
   const mainImg   = images[0] || null;
-  const extraImgs = images.slice(1, 4); // up to 3 extras fly out on hover
   const price     = product.price ? `€${(product.price / 100).toFixed(2)}` : null;
-  const href      = product.slug  ? `/products/${product.slug}`             : "#";
+  const href      = product.slug  ? `/products/${product.slug}` : "#";
   const variantId = product.variantId || "";
+
+  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    // Offset from card center, normalized -1 to 1
+    const nx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;
+    const ny = ((e.clientY - rect.top)  / rect.height - 0.5) * 2;
+    setMouseOff({ x: nx, y: ny });
+  }
 
   async function handleAdd(e: React.MouseEvent) {
     e.preventDefault();
@@ -260,69 +265,65 @@ function RelatedProductCard({
     finally { setAdding(false); }
   }
 
-  // Extra image scatter positions on hover
-  const scatterPos = [
-    { top: "8%",  left: "-12%",  rotation: -22 },
-    { top: "40%", left: "-18%",  rotation: 15  },
-    { top: "15%", right: "-14%", rotation: 20  },
-  ];
+  // We show 3 copies of the same sticker image in different positions
+  // (matching the screenshots where the same sticker type repeats around the card)
+  const stickerSlots = STICKER_SLOTS;
 
   return (
-    <a href={href}
+    <div ref={cardRef} style={{ position: "relative" }}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position:       "relative",
-        display:        "flex",
-        flexDirection:  "column",
-        background:     "#0a0a0a",
-        border:         "1.5px solid rgba(255,255,255,0.12)",
-        borderRadius:   18,
-        overflow:       "visible", // allow extras to fly outside
-        textDecoration: "none",
-        minHeight:       520,
-        cursor:         "pointer",
-      }}
-    >
-      {/* Oscillating badge */}
-      <div style={{ position: "absolute", top: -14, right: -14, zIndex: 20 }}>
-        <StarburstBadge text="New!" size={72} />
-      </div>
+      onMouseLeave={() => { setHovered(false); setMouseOff({ x: 0, y: 0 }); }}
+      onMouseMove={onMouseMove}>
 
-      {/* Extra images — fly out on hover */}
-      {extraImgs.map((src, i) => {
-        const sp = scatterPos[i] ?? scatterPos[0];
+      {/* ── Stickers — fly out on hover, follow mouse with parallax ── */}
+      {stickerSlots.map((slot, i) => {
+        // Parallax: move up to 12px in mouse direction, staggered per sticker
+        const parallaxStrength = 12 + i * 4;
+        const px = hovered ? mouseOff.x * parallaxStrength : 0;
+        const py = hovered ? mouseOff.y * parallaxStrength : 0;
+
         return (
           <div key={i} style={{
-            position:   "absolute",
-            ...sp,
-            width:      "38%",
-            zIndex:     30,
+            position:      "absolute",
+            top:           slot.top,
+            left:          (slot as any).left,
+            right:         (slot as any).right,
+            width:         "clamp(52px,6vw,80px)",
+            zIndex:        40,
             pointerEvents: "none",
-            opacity:    hovered ? 1 : 0,
-            transform:  hovered
-              ? `rotate(${sp.rotation}deg) scale(1)`
-              : `rotate(${sp.rotation}deg) scale(0.5) translateY(40px)`,
-            transition: `opacity 0.4s ease ${i * 0.07}s, transform 0.45s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.07}s`,
+            // Fly in/out: opacity + scale + translate
+            opacity:       hovered ? 1 : 0,
+            transform:     hovered
+              ? `rotate(${slot.rotation}deg) scale(${slot.scale}) translate(${px}px, ${py}px)`
+              : `rotate(${slot.rotation}deg) scale(0.3) translateY(30px)`,
+            transition:    `opacity 0.35s ease ${i * 0.06}s, transform 0.45s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.06}s`,
           }}>
-            <img src={src} alt="" style={{
-              width: "100%", height: "auto", objectFit: "contain",
-              filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.9))",
-              display: "block",
-            }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={stickerSrc} alt=""
+              style={{ width: "100%", height: "auto", display: "block",
+                filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.8))" }} />
           </div>
         );
       })}
 
-      {/* Card inner — clips main content */}
-      <div style={{ borderRadius: 18, overflow: "hidden", display: "flex", flexDirection: "column", flex: 1 }}>
+      {/* ── Card body ── */}
+      <a href={href} style={{
+        display: "flex", flexDirection: "column",
+        background: "#0a0a0a",
+        border: "1.5px solid rgba(255,255,255,0.12)",
+        borderRadius: 18, overflow: "hidden",
+        textDecoration: "none", minHeight: 520,
+        cursor: "pointer", position: "relative",
+      }}>
+        {/* Oscillating badge */}
+        <div style={{ position: "absolute", top: -14, right: -14, zIndex: 20 }}>
+          <StarburstBadge text="New!" size={72} />
+        </div>
+
         {/* Title + description */}
         <div style={{ padding: "28px 28px 0" }}>
-          <h3 style={{
-            color: "#fff", fontWeight: 900,
-            fontSize: "clamp(1.3rem,1.8vw,1.6rem)", letterSpacing: "-0.02em",
-            marginBottom: 10,
-          }}>
+          <h3 style={{ color: "#fff", fontWeight: 900,
+            fontSize: "clamp(1.3rem,1.8vw,1.6rem)", letterSpacing: "-0.02em", marginBottom: 10 }}>
             {product.title}
           </h3>
           <p style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.95rem", lineHeight: 1.55 }}>
@@ -331,25 +332,17 @@ function RelatedProductCard({
         </div>
 
         {/* Main image — scales + tilts on hover */}
-        <div style={{
-          flex: 1,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "16px 28px",
-          minHeight: 240,
-          overflow: "hidden",
-        }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "16px 28px", minHeight: 240, overflow: "hidden" }}>
           {mainImg ? (
-            <img src={mainImg} alt={product.title}
-              style={{
-                maxHeight: 240, maxWidth: "100%", objectFit: "contain",
-                filter: "drop-shadow(0 12px 32px rgba(0,0,0,0.85))",
-                transform: hovered
-                  ? "scale(1.1) rotate(-3deg)"
-                  : "scale(1) rotate(0deg)",
-                transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
-                transformOrigin: "center bottom",
-              }}
-            />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mainImg} alt={product.title} style={{
+              maxHeight: 240, maxWidth: "100%", objectFit: "contain",
+              filter: "drop-shadow(0 12px 32px rgba(0,0,0,0.85))",
+              transform: hovered ? "scale(1.1) rotate(-3deg)" : "scale(1) rotate(0deg)",
+              transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+              transformOrigin: "center bottom",
+            }} />
           ) : (
             <div style={{ width: 140, height: 200, background: "#111", borderRadius: 8,
               display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -362,16 +355,15 @@ function RelatedProductCard({
         {/* CTA */}
         <div style={{ padding: "0 20px 20px" }}>
           {price && variantId ? (
-            <button onClick={handleAdd} disabled={adding}
-              style={{
-                width: "100%", fontWeight: 900,
-                borderRadius: 9999, border: "none", cursor: adding ? "not-allowed" : "pointer",
-                padding: "18px 28px", fontSize: "1.1rem",
-                background: added ? "#22c55e" : "#fff",
-                color: added ? "#fff" : "#000",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                transition: "background 0.25s",
-              }}>
+            <button onClick={handleAdd} disabled={adding} style={{
+              width: "100%", fontWeight: 900, borderRadius: 9999, border: "none",
+              cursor: adding ? "not-allowed" : "pointer",
+              padding: "18px 28px", fontSize: "1.1rem",
+              background: added ? "#22c55e" : "#fff",
+              color: added ? "#fff" : "#000",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              transition: "background 0.25s",
+            }}>
               <span>{adding ? "Adding…" : added ? "✓ Added!" : "Add to Cart"}</span>
               <span>{price}</span>
             </button>
@@ -386,12 +378,12 @@ function RelatedProductCard({
             </button>
           )}
         </div>
-      </div>
-    </a>
+      </a>
+    </div>
   );
 }
 
-/* ─── Related products section ──────────────────────────────────────────── */
+/* ─── Related Products section ───────────────────────────────────────── */
 function RelatedProducts({
   excludeSlug, onCartUpdate, onCartOpen,
 }: {
@@ -416,15 +408,20 @@ function RelatedProducts({
   return (
     <section style={{ background: "#000", padding: "80px 48px",
       borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-      <h2 style={{ color: "#fff", fontWeight: 900, fontSize: "clamp(1.8rem,3.5vw,2.6rem)",
-        letterSpacing: "-0.02em", marginBottom: 40 }}>
+      <h2 style={{ color: "#fff", fontWeight: 900,
+        fontSize: "clamp(1.8rem,3.5vw,2.6rem)", letterSpacing: "-0.02em", marginBottom: 40 }}>
         You should check out:
       </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+      {/* overflow:visible so stickers can fly outside card bounds */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20,
+        overflow: "visible" }}>
         {products.map((p: any, i: number) => (
           <RelatedProductCard
-            key={p.id ?? i} product={p}
-            onCartUpdate={onCartUpdate} onCartOpen={onCartOpen}
+            key={p.id ?? i}
+            product={p}
+            stickerIdx={i}        // card 0 → sticker[0], card 1 → sticker[1], card 2 → sticker[2]
+            onCartUpdate={onCartUpdate}
+            onCartOpen={onCartOpen}
           />
         ))}
       </div>
@@ -432,7 +429,7 @@ function RelatedProducts({
   );
 }
 
-/* ─── Navbar ───────────────────────────────────────────────────────────── */
+/* ─── Navbar ─────────────────────────────────────────────────────────── */
 function Navbar({ cartCount, onCartOpen }: { cartCount: number; onCartOpen: () => void }) {
   const [shopOpen, setShopOpen]   = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -499,7 +496,7 @@ function Navbar({ cartCount, onCartOpen }: { cartCount: number; onCartOpen: () =
   );
 }
 
-/* ─── Footer ───────────────────────────────────────────────────────────── */
+/* ─── Footer ─────────────────────────────────────────────────────────── */
 function Footer() {
   const cols = [
     { heading: "Shop",    links: ["All Products","Main Games","Expansions","Family","Packs","Other Stuff"] },
@@ -547,19 +544,19 @@ function Footer() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MAIN PRODUCT PAGE — dynamic [slug]
-═══════════════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════════════
+   MAIN PRODUCT PAGE
+════════════════════════════════════════════════════════════════════════ */
 export default function ProductPage() {
   useInjectStyle("cah-product-anim", INJECT_CSS);
 
-  const params  = useParams();
-  const slug    = typeof params?.slug === "string" ? params.slug : "more-cah";
+  const params = useParams();
+  const slug   = typeof params?.slug === "string" ? params.slug : "more-cah";
 
-  const [product,  setProduct]  = useState<any>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [adding,   setAdding]   = useState(false);
-  const [added,    setAdded]    = useState(false);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [adding,  setAdding]  = useState(false);
+  const [added,   setAdded]   = useState(false);
 
   const { cartData, cartCount, cartOpen, checkoutOpen,
           setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCart();
@@ -596,9 +593,7 @@ export default function ProductPage() {
     ? product.images.map((img: any) => img.image?.url ? cmsImg(img.image.url) : "").filter(Boolean)
     : [];
   const mainImage    = images[0] || "";
-  const priceDisplay = product?.price
-    ? `€${(product.price / 100).toFixed(2)}`
-    : "€29";
+  const priceDisplay = product?.price ? `€${(product.price / 100).toFixed(2)}` : "€29";
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
@@ -616,51 +611,47 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-black">
       <Navbar cartCount={cartCount} onCartOpen={() => setCartOpen(true)} />
-      <CartDrawer
-        open={cartOpen} onClose={() => setCartOpen(false)}
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)}
         cartData={cartData} onCartUpdate={updateCart}
-        onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }}
-      />
-      <CheckoutDrawer
-        open={checkoutOpen} onClose={() => setCheckoutOpen(false)}
-        cartData={cartData} onOrderComplete={clearCart}
-      />
+        onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} />
+      <CheckoutDrawer open={checkoutOpen} onClose={() => setCheckoutOpen(false)}
+        cartData={cartData} onOrderComplete={clearCart} />
 
-      {/* ── Product hero ── */}
-      <div className="relative overflow-visible" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Hero */}
+      <div className="relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <PlusIcons />
-        <div className="relative z-10"
-          style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 40px",
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "start" }}>
-
-          {/* LEFT: main image + viewer strip */}
+        <div className="relative z-10" style={{
+          maxWidth: 1200, margin: "0 auto", padding: "64px 40px",
+          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "start",
+        }}>
+          {/* Left: image + viewer */}
           <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Main product image */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 420 }}>
               {mainImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={mainImage} alt={product.title}
                   style={{ maxHeight: 500, maxWidth: "100%", objectFit: "contain",
                     filter: "drop-shadow(0 20px 60px rgba(0,0,0,0.8))" }} />
               ) : (
                 <div style={{ width: 280, height: 380, background: "#111", borderRadius: 12,
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 900, fontSize: "1rem",
-                    textAlign: "center", padding: "0 24px" }}>{product.title}</span>
+                  <span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 900,
+                    fontSize: "1rem", textAlign: "center", padding: "0 24px" }}>
+                    {product.title}
+                  </span>
                 </div>
               )}
             </div>
-
-            {/* Image viewer thumbnails + overlay panel */}
-            <ImageViewer images={images} mainImage={mainImage} />
+            <ImageViewer images={images} />
           </div>
 
-          {/* RIGHT: info */}
+          {/* Right: info */}
           <div style={{ paddingTop: 8 }}>
             <h1 style={{ color: "#fff", fontWeight: 900,
-              fontSize: "clamp(2.2rem,4vw,3rem)", letterSpacing: "-0.02em", marginBottom: 28, lineHeight: 1.1 }}>
+              fontSize: "clamp(2.2rem,4vw,3rem)", letterSpacing: "-0.02em",
+              marginBottom: 28, lineHeight: 1.1 }}>
               {product.title}
             </h1>
-
             {product.description && (
               <div style={{ color: "#fff", fontSize: "1.1rem", lineHeight: 1.65, marginBottom: 24 }}>
                 {(() => {
@@ -670,7 +661,6 @@ export default function ProductPage() {
                 })()}
               </div>
             )}
-
             {product.bullets?.length > 0 && (
               <ul style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 40 }}>
                 {product.bullets.map((b: any, i: number) => (
@@ -682,7 +672,6 @@ export default function ProductPage() {
                 ))}
               </ul>
             )}
-
             <button onClick={handleAddToCart} disabled={adding || !variantId}
               style={{
                 width: "100%", fontWeight: 900, borderRadius: 9999, border: "none",
@@ -694,7 +683,10 @@ export default function ProductPage() {
                 transition: "background 0.25s",
               }}>
               <span>
-                {!variantId ? "Configure in CMS" : adding ? "Adding…" : added ? "✓ Added to Cart!" : "Add to Cart"}
+                {!variantId ? "Configure variantId in CMS"
+                  : adding ? "Adding…"
+                  : added  ? "✓ Added to Cart!"
+                  : "Add to Cart"}
               </span>
               <span>{priceDisplay}</span>
             </button>
@@ -702,13 +694,7 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* Related products */}
-      <RelatedProducts
-        excludeSlug={slug}
-        onCartUpdate={updateCart}
-        onCartOpen={() => setCartOpen(true)}
-      />
-
+      <RelatedProducts excludeSlug={slug} onCartUpdate={updateCart} onCartOpen={() => setCartOpen(true)} />
       <Footer />
     </div>
   );
