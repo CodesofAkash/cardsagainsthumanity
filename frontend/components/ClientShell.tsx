@@ -8,7 +8,7 @@ import CheckoutDrawer from "@/components/CheckoutDrawer";
 import BuySection from "@/components/BuySection";
 import HeroSection from "@/components/HeroSection";
 
-type Quote = { quote?: string; source?: string };
+type Quote = { quote: string; source: string };
 type BuyCardItem = {
   id?: string;
   label: string;
