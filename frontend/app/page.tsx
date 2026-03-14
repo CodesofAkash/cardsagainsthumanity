@@ -198,21 +198,21 @@ function StealSection({ cmsHome }: { cmsHome: any }) {
 
 function StuffSection({ cmsHome, stuffPosts }: { cmsHome: any; stuffPosts: any[] }) {
   const heading  = cmsHome?.stuffSection?.heading   || "Stuff we've done.";
-  const badgeTxt = cmsHome?.stuffSection?.badgeText || "More to\ncome!";
   const posts = stuffPosts.length ? stuffPosts : FALLBACK_STUFF;
-  const size = 96, cx = size / 2, cy = size / 2, n = 16, oR = cx - 2, iR = cx - 13;
-  let d = "";
-  for (let i = 0; i < n * 2; i++) { const a = (i * Math.PI) / n - Math.PI / 2; const r = i % 2 ? iR : oR; d += (i ? "L" : "M") + `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`; }
-  d += "Z";
   return (
     <section className="bg-black" style={{ padding: "80px 48px" }}>
       <div className="flex items-start justify-between mb-10">
         <h2 className="text-white font-black" style={{ fontFamily: "Georgia, serif", fontSize: "clamp(2rem,5vw,3.2rem)", letterSpacing: "-0.02em" }}>{heading}</h2>
-        <div style={{ width: size, height: size, position: "relative", flexShrink: 0 }}>
-          <svg width={size} height={size} style={{ position: "absolute" }}><path d={d} fill="#ffffff" /></svg>
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 8 }}>
-            <span className="font-black text-center leading-tight whitespace-pre-line text-black" style={{ fontSize: 12 }}>{badgeTxt}</span>
-          </div>
+        <div style={{ width: 86, height: 86, position: "relative", flexShrink: 0 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://img.cah.io/images/vc07edlh/production/6d7d67943605f882af1c5c779e5e77f7c23bb6a4-86x86.svg"
+            alt="More to come badge"
+            width={86}
+            height={86}
+            loading="lazy"
+            style={{ display: "block", width: "100%", height: "100%" }}
+          />
         </div>
       </div>
       <div className="grid grid-cols-3" style={{ gap: 12 }}>
@@ -232,7 +232,7 @@ function StuffSection({ cmsHome, stuffPosts }: { cmsHome: any; stuffPosts: any[]
                   loading="lazy"
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+              <div style={{ background: post.backgroundColor, color: post.textColor }} className="absolute inset-0 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
                 <span className="text-white text-xs font-black tracking-[0.2em] uppercase opacity-60">{post.tag}</span>
                 <p className="text-white font-black text-xl mt-1" style={{ fontFamily: "Georgia, serif" }}>{post.label}</p>

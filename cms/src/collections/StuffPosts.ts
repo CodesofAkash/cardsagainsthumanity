@@ -1,63 +1,148 @@
-import { CollectionConfig } from 'payload'
+import { CollectionConfig } from "payload";
 
 const StuffPosts: CollectionConfig = {
-  slug: 'stuff-posts',
+  slug: "stuff-posts",
+
   admin: {
-    useAsTitle: 'label',
-    defaultColumns: ['label', 'tag', 'order', 'updatedAt'],
-    description: 'Cards shown in the "Stuff we\'ve done" section. Add new ones anytime.',
+    useAsTitle: "label",
+    defaultColumns: ["label", "tag", "order", "published", "updatedAt"],
+    description:
+      'Cards shown in the "Stuff we’ve done" section on the homepage.',
   },
-  access: { read: () => true, create: () => true, update: () => true, delete: () => true },
+
+  access: {
+    read: () => true,
+    create: () => true,
+    update: () => true,
+    delete: () => true,
+  },
+
   fields: [
     {
-      name: 'label',
-      type: 'text',
+      name: "tag",
+      label: "Tag",
+      type: "text",
       required: true,
-      admin: { description: 'Title displayed on the card. E.g. "Black Friday 2018"' },
+      admin: {
+        description:
+          'Small pill label shown at the top. Example: "Black Friday 2018".',
+      },
     },
+
     {
-      name: 'tag',
-      type: 'select',
+      name: "label",
+      label: "Headline",
+      type: "text",
+      required: true,
+      admin: {
+        description:
+          'Main headline text. Example: "Holy fuck we had some deals."',
+      },
+    },
+
+    {
+      name: "image",
+      label: "Illustration",
+      type: "upload",
+      relationTo: "media",
+      required: true,
+      admin: {
+        description:
+          "Square illustration (1080×1080 recommended). Appears floating on the card.",
+      },
+    },
+
+    {
+      name: "href",
+      label: "Link",
+      type: "text",
+      defaultValue: "#",
+      admin: {
+        description:
+          "Where the card links when clicked. Example: /blog/black-friday",
+      },
+    },
+
+    {
+      name: "cta",
+      label: "CTA Label",
+      type: "select",
+      defaultValue: "Read",
       options: [
-        { label: 'Read', value: 'Read' },
-        { label: 'Watch', value: 'Watch' },
-        { label: 'Listen', value: 'Listen' },
-        { label: 'Play', value: 'Play' },
+        { label: "Read", value: "Read" },
+        { label: "Watch", value: "Watch" },
+        { label: "Listen", value: "Listen" },
+        { label: "Play", value: "Play" },
       ],
-      defaultValue: 'Read',
-      admin: { description: 'Small tag shown above the title.' },
+      admin: {
+        description: "Label shown beside the arrow button.",
+      },
     },
+
     {
-      name: 'description',
-      type: 'text',
-      admin: { description: 'Short description shown below the title.' },
+      name: "backgroundColor",
+      label: "Background Color",
+      type: "text",
+      defaultValue: "#ffffff",
+      admin: {
+        description:
+          "Card background color (hex). Example: #fffe5b, #ede5ff, #1b5bff",
+      },
     },
+
     {
-      name: 'image',
-      type: 'upload',
-      relationTo: 'media',
-      required: true,
-      admin: { description: 'Square image (1080×1080 recommended).' },
+      name: "textColor",
+      label: "Text Color",
+      type: "text",
+      defaultValue: "#000000",
+      admin: {
+        description:
+          "Main headline text color. Example: #fe2f2f, #7333f1, #d7b73b",
+      },
     },
+
     {
-      name: 'href',
-      type: 'text',
-      defaultValue: '#',
-      admin: { description: 'Link URL when the card is clicked.' },
+      name: "tagBg",
+      label: "Tag Background Color",
+      type: "text",
+      defaultValue: "#000000",
+      admin: {
+        description: "Background color of the tag pill.",
+      },
     },
+
     {
-      name: 'order',
-      type: 'number',
+      name: "tagColor",
+      label: "Tag Text Color",
+      type: "text",
+      defaultValue: "#ffffff",
+      admin: {
+        description: "Text color inside the tag pill.",
+      },
+    },
+
+    {
+      name: "order",
+      label: "Order",
+      type: "number",
       defaultValue: 99,
-      admin: { description: 'Lower numbers appear first.' },
+      admin: {
+        description:
+          "Display order. Lower numbers appear first. Use 10, 20, 30...",
+      },
     },
+
     {
-      name: 'published',
-      type: 'checkbox',
+      name: "published",
+      label: "Published",
+      type: "checkbox",
       defaultValue: true,
-      admin: { description: 'Uncheck to hide without deleting.' },
+      admin: {
+        description:
+          "Uncheck to hide this card without deleting it.",
+      },
     },
   ],
-}
+};
 
-export default StuffPosts
+export default StuffPosts;
