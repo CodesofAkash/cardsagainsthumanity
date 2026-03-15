@@ -2,8 +2,8 @@
   "compilerOptions": {
     "target": "ES2021",
     "esModuleInterop": true,
-    "module": "CommonJS",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,
