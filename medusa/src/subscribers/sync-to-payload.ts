@@ -1,13 +1,15 @@
-const syncToPayload = async ({ event, container }: any) => {
+// medusa/src/subscribers/sync-to-payload.js
+
+async function syncToPayload({ event, container }) {
   const query = container.resolve('query')
 
-  const { data } = await query.graph({
+  const result = await query.graph({
     entity: 'product',
     filters: { id: event.data.id },
     fields: ['id', 'title', 'description'],
   })
 
-  const product = data?.[0]
+  const product = result.data && result.data[0]
   if (!product) return
 
   const PAYLOAD_URL = process.env.PAYLOAD_URL || 'http://localhost:3001'
@@ -15,18 +17,18 @@ const syncToPayload = async ({ event, container }: any) => {
 
   try {
     const searchRes = await fetch(
-      `${PAYLOAD_URL}/api/products?where[medusaId][equals]=${product.id}`,
-      { headers: { Authorization: `users API-Key ${PAYLOAD_SECRET}` } }
+      PAYLOAD_URL + '/api/products?where[medusaId][equals]=' + product.id,
+      { headers: { Authorization: 'users API-Key ' + PAYLOAD_SECRET } }
     )
     const searchData = await searchRes.json()
-    const payloadProduct = searchData?.docs?.[0]
+    const payloadProduct = searchData.docs && searchData.docs[0]
     if (!payloadProduct) return
 
-    await fetch(`${PAYLOAD_URL}/api/products/${payloadProduct.id}`, {
+    await fetch(PAYLOAD_URL + '/api/products/' + payloadProduct.id, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `users API-Key ${PAYLOAD_SECRET}`,
+        Authorization: 'users API-Key ' + PAYLOAD_SECRET,
       },
       body: JSON.stringify({
         title: product.title,
@@ -40,8 +42,8 @@ const syncToPayload = async ({ event, container }: any) => {
   }
 }
 
-export default syncToPayload
-
-export const config = {
+syncToPayload.config = {
   event: ['product.updated'],
 }
+
+module.exports = syncToPayload
