@@ -1,15 +1,18 @@
 // medusa/src/subscribers/sync-to-payload.ts
-import type { SubscriberArgs, SubscriberConfig } from '@medusajs/framework'
 
-async function syncToPayload({ event, container }: SubscriberArgs<{ id: string }>) {
+const syncToPayload = async ({ event, container }: {
+  event: { data: { id: string } }
+  container: any
+}) => {
   const query = container.resolve('query')
-  
-  const { data: [product] } = await query.graph({
+
+  const { data } = await query.graph({
     entity: 'product',
     filters: { id: event.data.id },
     fields: ['id', 'title', 'description'],
   })
 
+  const product = data?.[0]
   if (!product) return
 
   const PAYLOAD_URL = process.env.PAYLOAD_URL || 'http://localhost:3001'
@@ -22,7 +25,6 @@ async function syncToPayload({ event, container }: SubscriberArgs<{ id: string }
     )
     const searchData = await searchRes.json()
     const payloadProduct = searchData?.docs?.[0]
-
     if (!payloadProduct) return
 
     await fetch(`${PAYLOAD_URL}/api/products/${payloadProduct.id}`, {
@@ -43,8 +45,7 @@ async function syncToPayload({ event, container }: SubscriberArgs<{ id: string }
   }
 }
 
-export default syncToPayload
-
-export const config: SubscriberConfig = {
+module.exports = syncToPayload
+module.exports.config = {
   event: ['product.updated'],
 }
