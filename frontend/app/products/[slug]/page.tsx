@@ -523,19 +523,23 @@ function RelatedProductCard({
               style={{
               width: "100%", fontWeight: 900, borderRadius: 9999, border: ctaHover ? "2px solid #000" : "2px solid #fff",
               cursor: adding ? "not-allowed" : "pointer",
-              padding: "18px 28px", fontSize: "1.1rem",
+              padding: "18px 28px", fontSize: "1.4rem",
               background: added ? "#22c55e" : ctaHover ? "#fff" : "#000",
               color: added ? "#fff" : ctaHover ? "#000" : "#fff",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               transition: "background 0.2s, color 0.2s, border-color 0.2s",
             }}>
-              <span>{adding ? "Adding…" : added ? "✓ Added!" : "Add to Cart"}</span>
-              <span>{price}</span>
+              <span style={{ fontWeight: 700, fontSize: "1.65rem", letterSpacing: "0.02em", lineHeight: 1 }}>
+                {adding ? "Adding…" : added ? "✓ Added!" : "Add to Cart"}
+              </span>
+              <span style={{ fontWeight: 700, fontSize: "1.65rem", letterSpacing: "0.02em", lineHeight: 1 }}>
+                {price}
+              </span>
             </button>
           ) : (
             <button disabled style={{
-              width: "100%", fontWeight: 900, borderRadius: 9999,
-              padding: "18px 28px", fontSize: "1.1rem",
+              width: "100%", fontWeight: 700, borderRadius: 9999,
+              padding: "18px 28px", fontSize: "1.4rem",
               background: "transparent", color: "#fff",
               border: "2px solid rgba(255,255,255,0.25)", cursor: "not-allowed",
             }}>
