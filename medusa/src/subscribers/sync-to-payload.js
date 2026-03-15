@@ -42,8 +42,11 @@ async function syncToPayload({ event, container }) {
   }
 }
 
-syncToPayload.config = {
-  event: ['product.updated'],
+const config = {
+  event: 'product.updated',
 }
 
-module.exports = syncToPayload
+module.exports = {
+  default: syncToPayload,
+  config,
+}

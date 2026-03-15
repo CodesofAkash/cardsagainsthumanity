@@ -5,39 +5,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
-
-type BuyCardImage = {
-  image?: { url?: string } | null;
-};
-
-type BuyCardDoc = {
-  label?: string;
-  href?: string;
-  backgroundColor?: string;
-  productImage?: { url?: string } | null;
-  images?: BuyCardImage[];
-  order?: number;
-  published?: boolean;
-};
-
 type ShopCard = {
   label: string;
   href: string;
   img: string;
   bg: string;
 };
-
-function resolveCmsUrl(url?: string): string {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return `${CMS_URL.replace(/\/$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
-}
-
-function pickCardImage(doc: BuyCardDoc): string {
-  const imageFromList = doc.images?.find((entry) => entry.image?.url)?.image?.url;
-  return resolveCmsUrl(imageFromList || doc.productImage?.url);
-}
 
 const MEGA_CARD_ANIM_STYLE = `
   @keyframes cahMegaTilt {
@@ -84,12 +57,12 @@ export function CartIcon({ className = "" }: { className?: string }) {
 
 // ── Shop Mega-Menu ─────────────────────────────────────────────────────────────
 // Full-width black panel with 3 product image columns
-const SHOP_FALLBACK_COLS: ShopCard[] = [
+const SHOP_MENU_CARDS: ShopCard[] = [
   {
     label: "All Products",
     href: "/products/more-cah",
     img: "https://cardsagainsthumanity-cms.vercel.app/api/media/file/mcah",
-    bg: "#7b5cf0",
+    bg: "#5bc8d4",
   },
   {
     label: "Expansions",
@@ -100,51 +73,14 @@ const SHOP_FALLBACK_COLS: ShopCard[] = [
   {
     label: "Twists",
     href: "/products/more-cah",
-    img: "https://cardsagainsthumanity-cms.vercel.app/api/media/file/bundle",
-    bg: "#5bc8d4",
+    img: "https://cardsagainsthumanity-cms.vercel.app/api/media/file/shit%20list",
+    bg: "#7b5cf0",
   },
 ];
 
 export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void; visible?: boolean }) {
   useInjectMegaCardAnim();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [shopCards, setShopCards] = useState<ShopCard[]>(
-    SHOP_FALLBACK_COLS.map((card) => ({ ...card, img: "" })),
-  );
-
-  useEffect(() => {
-    let active = true;
-
-    fetch(`${CMS_URL}/api/buy-cards?where[published][equals]=true&sort=order&limit=3&depth=2`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!active || !data?.docs?.length) return;
-
-        const docs: BuyCardDoc[] = (data.docs as BuyCardDoc[])
-          .filter((doc) => doc.published !== false)
-          .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
-          .slice(0, 3);
-
-        if (!docs.length) return;
-
-        const mapped: ShopCard[] = docs.map((doc, i) => {
-          const fallback = SHOP_FALLBACK_COLS[i] ?? SHOP_FALLBACK_COLS[0];
-          return {
-            label: fallback.label,
-            href: fallback.href,
-            img: pickCardImage(doc),
-            bg: fallback.bg,
-          };
-        });
-
-        setShopCards(mapped);
-      })
-      .catch(() => {});
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   return (
     <div
@@ -207,7 +143,7 @@ export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void;
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 22 }}>
-            {shopCards.map((col, idx) => {
+            {SHOP_MENU_CARDS.map((col, idx) => {
               const hovered = hoveredIndex === idx;
               const baseRotation = idx % 2 === 0 ? -1.6 : 1.6;
 
@@ -236,7 +172,7 @@ export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void;
                           height: "100%",
                           objectFit: "contain",
                           objectPosition: "center",
-                          padding: "6%",
+                          padding: "2.5%",
                           boxSizing: "border-box",
                           display: "block",
                           ["--base-rot" as never]: `${baseRotation}deg`,

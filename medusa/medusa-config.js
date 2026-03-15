@@ -1,12 +1,16 @@
 const { defineConfig } = require("@medusajs/framework/utils")
 
+const useRedis = process.env.USE_REDIS === "true"
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl:
       process.env.DATABASE_URL ||
       "postgresql://placeholder:placeholder@localhost:5432/placeholder",
 
-    redisUrl: process.env.REDIS_URL,
+    // Keep Redis optional in local development.
+    // Set USE_REDIS=true to enable redis-backed modules.
+    redisUrl: useRedis ? process.env.REDIS_URL : undefined,
 
     http: {
       storeCors: process.env.STORE_CORS || "http://localhost:3000",
