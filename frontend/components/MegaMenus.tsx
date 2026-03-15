@@ -108,7 +108,9 @@ const SHOP_FALLBACK_COLS: ShopCard[] = [
 export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void; visible?: boolean }) {
   useInjectMegaCardAnim();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [shopCards, setShopCards] = useState<ShopCard[]>(SHOP_FALLBACK_COLS);
+  const [shopCards, setShopCards] = useState<ShopCard[]>(
+    SHOP_FALLBACK_COLS.map((card) => ({ ...card, img: "" })),
+  );
 
   useEffect(() => {
     let active = true;
@@ -130,7 +132,7 @@ export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void;
           return {
             label: fallback.label,
             href: fallback.href,
-            img: pickCardImage(doc) || fallback.img,
+            img: pickCardImage(doc),
             bg: fallback.bg,
           };
         });
@@ -156,8 +158,17 @@ export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void;
       }}
       onClick={e => e.stopPropagation()}
     >
-      {/* spacer for fixed navbar */}
-      <div style={{ height: 72 }} />
+      {/* logo row — visible when opened from top of page where sticky nav is hidden */}
+      <div style={{ height: 72, padding: "0 40px", display: "flex", alignItems: "center" }}>
+        <Link
+          href="/"
+          onClick={onClose}
+          className="font-extrabold text-white hover:opacity-70 transition-opacity"
+          style={{ fontSize: "28px", letterSpacing: "-0.02em", textDecoration: "none" }}
+        >
+          Cards Against Humanity
+        </Link>
+      </div>
 
       <div
         style={{
@@ -213,21 +224,28 @@ export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void;
                   className="rounded-3xl overflow-hidden"
                   style={{ background: col.bg, aspectRatio: "1.85/1", position: "relative" }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    className="cah-mega-tilt"
-                    src={col.img}
-                    alt={col.label}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      display: "block",
-                      ["--base-rot" as never]: `${baseRotation}deg`,
-                      ["--mega-scale" as never]: hovered ? "1.06" : "1",
-                      animation: `cahMegaTilt ${6.6 + idx * 1.1}s ease-in-out ${idx * 0.25}s infinite`,
-                    }}
-                  />
+                  {col.img ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        className="cah-mega-tilt"
+                        src={col.img}
+                        alt={col.label}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          objectPosition: "center",
+                          padding: "6%",
+                          boxSizing: "border-box",
+                          display: "block",
+                          ["--base-rot" as never]: `${baseRotation}deg`,
+                          ["--mega-scale" as never]: hovered ? "1.06" : "1",
+                          animation: `cahMegaTilt ${6.6 + idx * 1.1}s ease-in-out ${idx * 0.25}s infinite`,
+                        }}
+                      />
+                    </>
+                  ) : null}
                 </div>
                 <p
                   className="text-white font-black"
@@ -281,7 +299,17 @@ export function AboutMegaMenu({ onClose, visible = true }: { onClose: () => void
       }}
       onClick={e => e.stopPropagation()}
     >
-      <div style={{ height: 72 }} />
+      {/* logo row — visible when opened from top of page where sticky nav is hidden */}
+      <div style={{ height: 72, padding: "0 40px", display: "flex", alignItems: "center" }}>
+        <Link
+          href="/"
+          onClick={onClose}
+          className="font-extrabold text-white hover:opacity-70 transition-opacity"
+          style={{ fontSize: "28px", letterSpacing: "-0.02em", textDecoration: "none" }}
+        >
+          Cards Against Humanity
+        </Link>
+      </div>
       <div
         style={{
           display: "grid",

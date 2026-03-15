@@ -13,6 +13,7 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
   const items = cartData?.cart?.items || [];
   const subtotal = cartData?.cart?.subtotal || 0;
   const cartId = cartData?.cart?.id;
+  const isOpen = open && items.length > 0;
 
   async function changeQty(itemId: string, qty: number) {
     if (!cartId) return;
@@ -47,8 +48,8 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         className="fixed inset-0 bg-black/20"
         style={{
           zIndex: 120,
-          opacity: open ? 1 : 0,
-          pointerEvents: open ? "auto" : "none",
+          opacity: isOpen ? 1 : 0,
+          pointerEvents: isOpen ? "auto" : "none",
           transition: "opacity 0.36s ease",
         }}
         onClick={onClose}
@@ -57,7 +58,7 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         className="fixed top-0 right-0 h-full w-95 bg-white shadow-2xl flex flex-col"
         style={{
           zIndex: 121,
-          transform: open ? "translateX(0)" : "translateX(100%)",
+          transform: isOpen ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.56s cubic-bezier(0.22, 1, 0.36, 1)",
           willChange: "transform",
         }}
@@ -82,18 +83,8 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
 
         {/* Items */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center gap-6">
-              <p className="text-2xl font-black text-black leading-tight" style={{ fontFamily: "Georgia, serif" }}>
-                Hey, there&apos;s<br />nothing in here.
-              </p>
-              <button onClick={onClose} className="bg-black text-white font-black px-8 py-3 rounded-full hover:bg-gray-800 transition-colors">
-                Buy Some Stuff
-              </button>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {items.map((item: any) => (
+          <div className="divide-y divide-gray-100">
+            {items.map((item: any) => (
                 <div key={item.id} className="flex gap-4 py-4 items-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
                     {item.thumbnail && (
@@ -124,9 +115,8 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
                     >Remove</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
         </div>
 
         {/* Footer */}
