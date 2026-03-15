@@ -902,9 +902,9 @@ export default function HeroSection({
   const set      = CARD_SETS[setIdx];
   const btnCls   = "text-white flex items-center gap-1 bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity";
   const btnStyle: React.CSSProperties = { fontSize: "28px", fontWeight: 800, fontFamily: "inherit" };
-  const cartIconLabel = cartCount > 0
-    ? (cartIconHovered ? formatCartPrice(cartSubtotalCents, cartCurrencyCode) : String(cartCount))
-    : "";
+  const cartIconLabel = cartIconHovered && cartCount > 0
+    ? formatCartPrice(cartSubtotalCents, cartCurrencyCode)
+    : String(cartCount);
 
   const chevron = (open: boolean) => (
     <svg
@@ -961,10 +961,10 @@ export default function HeroSection({
                 fontSize: cartIconHovered && cartCount > 0 ? "12px" : "20px",
                 fontWeight: 800,
                 color: "#ffffff",
-                top: cartIconHovered && cartCount > 0 ? "46%" : "-6px",
-                left: cartIconHovered && cartCount > 0 ? "50%" : "auto",
-                right: cartIconHovered && cartCount > 0 ? "auto" : "20px",
-                transform: cartIconHovered && cartCount > 0 ? "translate(-50%, -52%)" : "none",
+                top: "46%",
+                left: "50%",
+                right: "auto",
+                transform: "translate(-50%, -52%)",
                 transition: "font-size 0.15s ease, left 0.15s ease, right 0.15s ease, top 0.15s ease, transform 0.15s ease",
                 whiteSpace: "nowrap",
                 lineHeight: 1,

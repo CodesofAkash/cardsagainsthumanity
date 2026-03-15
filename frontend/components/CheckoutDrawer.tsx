@@ -28,6 +28,18 @@ function formatExpiry(val: string) {
   return digits;
 }
 
+function formatCartPrice(amountCents: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode.toUpperCase(),
+      minimumFractionDigits: 2,
+    }).format(amountCents / 100);
+  } catch {
+    return `$${(amountCents / 100).toFixed(2)}`;
+  }
+}
+
 function validateStep(step: StepName, data: any): string | null {
   if (step === "address") {
     if (!data.addr.full_name.trim()) return "Please enter your full name.";
@@ -73,6 +85,8 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
   const cartId   = cartData?.cart?.id;
   const subtotal = cartData?.cart?.subtotal || 0;
+  const currencyCode = ((cartData?.cart?.currency_code as string | undefined) || "usd").toUpperCase();
+  const subtotalLabel = formatCartPrice(subtotal, currencyCode);
   const cc = (c: string) => COUNTRY_CODES[c] || c.slice(0,2).toLowerCase();
 
   function handleCardNumberChange(raw: string) {
@@ -103,13 +117,8 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
   // ── Drawer GSAP ───────────────────────────────────────────────────────────
   useEffect(() => {
-    const el = drawerRef.current;
-    if (!el) return;
     if (open) {
       setStep("country"); setOrderId(""); setError("");
-      gsap.fromTo(el, { y:"100%" }, { y:0, duration:0.5, ease:"back.out(1.3)" });
-    } else {
-      gsap.to(el, { y:"100%", duration:0.28, ease:"power2.in" });
     }
   }, [open]);
 
@@ -305,16 +314,42 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
   return (
     <>
-      {open && <div className="fixed inset-0 bg-black/60" style={{ zIndex: 120 }} onClick={onClose} />}
-
       <div
         ref={drawerRef}
-        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl"
-        style={{ transform:"translateY(100%)", zIndex: 121 }}
+        className="fixed left-0 right-0 bottom-0 bg-[#ededed]"
+        style={{
+          top: 72,
+          transform: open ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
+          willChange: "transform",
+          pointerEvents: open ? "auto" : "none",
+          zIndex: 121,
+          borderTop: "1px solid #111",
+        }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+        {/* Top action row */}
+        <div className="bg-white border-b border-black px-5 py-3">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <button
+              onClick={onClose}
+              className="h-9 px-4 rounded-full border-2 border-black text-black text-sm font-black tracking-wide leading-none hover:bg-black hover:text-white transition-colors"
+            >
+              ← EDIT ORDER
+            </button>
+
+            <div className="flex items-center gap-6">
+              <p className="text-black font-black text-[34px] leading-none whitespace-nowrap">
+                {subtotalLabel} <span className="text-lg align-middle">{currencyCode}</span>
+              </p>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full border-2 border-black text-black text-lg font-black leading-none hover:bg-black hover:text-white transition-colors"
+                aria-label="Close checkout"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Summary bar */}
@@ -337,7 +372,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
         )}
 
         {/* Step area */}
-        <div className="h-[440px] flex flex-col justify-center px-8 py-4 overflow-hidden relative">
+        <div className="h-[calc(100svh-136px)] flex flex-col justify-center px-8 py-4 overflow-hidden relative">
 
           {showBack && (
             <button onClick={goBack}
@@ -357,17 +392,19 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             {/* ── STEP 1: Country ── */}
             {step === "country" && (
               <div className="text-center">
-                <h2 className="text-3xl font-black text-black mb-8" style={{ fontFamily:"Georgia,serif" }}>
+                <h2 className="text-[46px] font-black text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
                   What country are we shipping to?
                 </h2>
-                <div className="relative max-w-sm mx-auto mb-8">
+                <div className="relative w-full max-w-190 mx-auto mb-8">
                   <select value={country} onChange={(e) => setCountry(e.target.value)}
-                    className="w-full border-2 border-black rounded-xl px-6 py-4 text-lg font-black text-black appearance-none cursor-pointer focus:outline-none bg-white">
+                    className="w-full border border-black rounded-lg px-6 py-4 pr-14 text-[34px] font-black text-black appearance-none cursor-pointer focus:outline-none bg-white text-center">
                     {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-xl text-black">›</span>
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-2xl text-black">▾</span>
                 </div>
-                <button onClick={confirmCountry} className={btnCls}>Confirm Country</button>
+                <button onClick={confirmCountry} className="bg-black text-white font-black text-[34px] px-11 py-4 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
+                  Confirm Country
+                </button>
               </div>
             )}
 

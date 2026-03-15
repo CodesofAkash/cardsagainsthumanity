@@ -32,9 +32,9 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
 
   const cartSubtotal = (cartData as any)?.cart?.subtotal || 0;
   const cartCurrencyCode = ((cartData as any)?.cart?.currency_code as string | undefined) || "usd";
-  const cartIconLabel = cartCount > 0
-    ? (cartIconHovered ? formatCartPrice(cartSubtotal, cartCurrencyCode) : String(cartCount))
-    : "";
+  const cartIconLabel = cartIconHovered && cartCount > 0
+    ? formatCartPrice(cartSubtotal, cartCurrencyCode)
+    : String(cartCount);
 
   // Show navbar after scrolling
   useEffect(() => {
@@ -231,10 +231,10 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
                   fontSize: cartIconHovered && cartCount > 0 ? "12px" : "20px",
                   fontWeight: 800,
                   color: "#ffffff",
-                  top: cartIconHovered && cartCount > 0 ? "46%" : "-6px",
-                  left: cartIconHovered && cartCount > 0 ? "50%" : "auto",
-                  right: cartIconHovered && cartCount > 0 ? "auto" : "20px",
-                  transform: cartIconHovered && cartCount > 0 ? "translate(-50%, -52%)" : "none",
+                  top: "46%",
+                  left: "50%",
+                  right: "auto",
+                  transform: "translate(-50%, -52%)",
                   transition: "font-size 0.15s ease, left 0.15s ease, right 0.15s ease, top 0.15s ease, transform 0.15s ease",
                   whiteSpace: "nowrap",
                   lineHeight: 1,
