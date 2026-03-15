@@ -1,9 +1,6 @@
-// medusa/src/subscribers/sync-to-payload.ts
+// medusa/src/subscribers/sync-to-payload.js
 
-const syncToPayload = async ({ event, container }: {
-  event: { data: { id: string } }
-  container: any
-}) => {
+async function syncToPayload({ event, container }) {
   const query = container.resolve('query')
 
   const { data } = await query.graph({
@@ -39,13 +36,14 @@ const syncToPayload = async ({ event, container }: {
       }),
     })
 
-    console.log(`[Medusa→CMS] Synced product ${product.id}`)
+    console.log('[Medusa->CMS] Synced product ' + product.id)
   } catch (err) {
-    console.error('[Medusa→CMS] Sync error:', err)
+    console.error('[Medusa->CMS] Sync error:', err)
   }
 }
 
-module.exports = syncToPayload
-module.exports.config = {
+syncToPayload.config = {
   event: ['product.updated'],
 }
+
+module.exports = syncToPayload

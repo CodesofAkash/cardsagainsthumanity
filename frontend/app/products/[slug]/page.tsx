@@ -358,9 +358,11 @@ function ImageViewer({ images }: { images: string[] }) {
 ════════════════════════════════════════════════════════════════════════ */
 // Sticker positions relative to card (as % offsets)
 const STICKER_SLOTS = [
-  { top: "8%",  left: "-14%", rotation: -25, scale: 1.1 },
-  { top: "45%", left: "-18%", rotation: 18,  scale: 0.95 },
-  { top: "10%", right: "-14%",rotation: 22,  scale: 1.05 },
+  { top: "-3%", left: "41%", rotation: -8, scale: 1.02, xDir: 0, yDir: -1 },
+  { top: "41%", left: "-14%", rotation: -14, scale: 1.0, xDir: -1, yDir: 0 },
+  { top: "41%", right: "-14%", rotation: 14, scale: 1.0, xDir: 1, yDir: 0 },
+  { top: "85%", left: "9%", rotation: -10, scale: 0.96, xDir: -1, yDir: 1 },
+  { top: "85%", right: "9%", rotation: 10, scale: 0.96, xDir: 1, yDir: 1 },
 ];
 
 function RelatedProductCard({
@@ -377,10 +379,11 @@ function RelatedProductCard({
   const [hovered, setHovered] = useState(false);
   const [adding,  setAdding]  = useState(false);
   const [added,   setAdded]   = useState(false);
+  const [ctaHover, setCtaHover] = useState(false);
 
   // Mouse position relative to card center — for parallax
   const [mouseOff, setMouseOff] = useState({ x: 0, y: 0 });
-  const cardRef = useRef<HTMLDivElement>(null);
+  const imageAreaRef = useRef<HTMLDivElement>(null);
 
   const stickerSrc = CAH_STICKERS[stickerIdx % CAH_STICKERS.length];
 
@@ -390,9 +393,8 @@ function RelatedProductCard({
   const variantId = product.variantId || "";
 
   function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    // Offset from card center, normalized -1 to 1
+    if (!imageAreaRef.current) return;
+    const rect = imageAreaRef.current.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;
     const ny = ((e.clientY - rect.top)  / rect.height - 0.5) * 2;
     setMouseOff({ x: nx, y: ny });
@@ -423,50 +425,15 @@ function RelatedProductCard({
   const stickerSlots = STICKER_SLOTS;
 
   return (
-    <div ref={cardRef} style={{ position: "relative" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setMouseOff({ x: 0, y: 0 }); }}
-      onMouseMove={onMouseMove}>
-
-      {/* ── Stickers — fly out on hover, follow mouse with parallax ── */}
-      {stickerSlots.map((slot, i) => {
-        // Parallax: move up to 12px in mouse direction, staggered per sticker
-        const parallaxStrength = 12 + i * 4;
-        const px = hovered ? mouseOff.x * parallaxStrength : 0;
-        const py = hovered ? mouseOff.y * parallaxStrength : 0;
-
-        return (
-          <div key={i} style={{
-            position:      "absolute",
-            top:           slot.top,
-            left:          (slot as any).left,
-            right:         (slot as any).right,
-            width:         "clamp(52px,6vw,80px)",
-            zIndex:        40,
-            pointerEvents: "none",
-            // Fly in/out: opacity + scale + translate
-            opacity:       hovered ? 1 : 0,
-            transform:     hovered
-              ? `rotate(${slot.rotation}deg) scale(${slot.scale}) translate(${px}px, ${py}px)`
-              : `rotate(${slot.rotation}deg) scale(0.3) translateY(30px)`,
-            transition:    `opacity 0.35s ease ${i * 0.06}s, transform 0.45s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.06}s`,
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={stickerSrc} alt=""
-              style={{ width: "100%", height: "auto", display: "block",
-                filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.8))" }} />
-          </div>
-        );
-      })}
-
+    <div style={{ position: "relative", zIndex: hovered ? 40 : 1 }}>
       {/* ── Card body ── */}
       <a href={href} style={{
         display: "flex", flexDirection: "column",
         background: "#0a0a0a",
-        border: "1.5px solid rgba(255,255,255,0.12)",
-        borderRadius: 18, overflow: "hidden",
-        textDecoration: "none", minHeight: 520,
-        cursor: "pointer", position: "relative",
+        border: "2px solid #fff",
+        borderRadius: 18, overflow: "visible",
+        textDecoration: "none", minHeight: 640,
+        cursor: "pointer", position: "relative", width: "100%", maxWidth: 415, zIndex: 10,
       }}>
         {/* Oscillating badge */}
         <div style={{ position: "absolute", top: -14, right: -14, zIndex: 20 }}>
@@ -476,17 +443,59 @@ function RelatedProductCard({
         {/* Title + description */}
         <div style={{ padding: "28px 28px 0" }}>
           <h3 style={{ color: "#fff", fontWeight: 900,
-            fontSize: "clamp(1.3rem,1.8vw,1.6rem)", letterSpacing: "-0.02em", marginBottom: 10 }}>
+            fontSize: "clamp(2rem,2.2vw,2.45rem)", lineHeight: 1.07,
+            letterSpacing: "-0.015em", marginBottom: 12 }}>
             {product.title}
           </h3>
-          <p style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.95rem", lineHeight: 1.55 }}>
+          <p style={{ color: "rgba(255,255,255,0.82)", fontSize: "1.05rem", lineHeight: 1.35, fontWeight: 600 }}>
             {product.description}
           </p>
         </div>
 
         {/* Main image — scales + tilts on hover */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "16px 28px", minHeight: 240, overflow: "hidden" }}>
+        <div
+          ref={imageAreaRef}
+          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "16px 28px", minHeight: 240, overflow: "visible", position: "relative" }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => { setHovered(false); setMouseOff({ x: 0, y: 0 }); }}
+          onMouseMove={onMouseMove}
+        >
+          {stickerSlots.map((slot, i) => {
+            const parallaxStrength = 16;
+            const px = hovered ? mouseOff.x * parallaxStrength : 0;
+            const py = hovered ? mouseOff.y * parallaxStrength : 0;
+
+            return (
+              <div key={i} style={{
+                position: "absolute",
+                top: slot.top,
+                left: "left" in slot ? slot.left : undefined,
+                right: "right" in slot ? slot.right : undefined,
+                width: "clamp(58px,6.1vw,92px)",
+                zIndex: 120,
+                pointerEvents: "none",
+                opacity: hovered ? 1 : 0,
+                transform: hovered
+                  ? `translate(${px}px, ${py}px) rotate(${slot.rotation}deg) scale(${slot.scale})`
+                  : `translate(0px, 0px) rotate(${slot.rotation}deg) scale(0.62)`,
+                transition: "opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)",
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={stickerSrc}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "auto",
+                    display: "block",
+                    filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.55))",
+                  }}
+                />
+              </div>
+            );
+          })}
+
           {mainImg ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={mainImg} alt={product.title} style={{
@@ -494,7 +503,7 @@ function RelatedProductCard({
               filter: "drop-shadow(0 12px 32px rgba(0,0,0,0.85))",
               transform: hovered ? "scale(1.1) rotate(-3deg)" : "scale(1) rotate(0deg)",
               transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
-              transformOrigin: "center bottom",
+              transformOrigin: "center bottom", position: "relative", zIndex: 180,
             }} />
           ) : (
             <div style={{ width: 140, height: 200, background: "#111", borderRadius: 8,
@@ -508,14 +517,17 @@ function RelatedProductCard({
         {/* CTA */}
         <div style={{ padding: "0 20px 20px" }}>
           {price && variantId ? (
-            <button onClick={handleAdd} disabled={adding} style={{
-              width: "100%", fontWeight: 900, borderRadius: 9999, border: "none",
+            <button onClick={handleAdd} disabled={adding}
+              onMouseEnter={() => setCtaHover(true)}
+              onMouseLeave={() => setCtaHover(false)}
+              style={{
+              width: "100%", fontWeight: 900, borderRadius: 9999, border: ctaHover ? "2px solid #000" : "2px solid #fff",
               cursor: adding ? "not-allowed" : "pointer",
               padding: "18px 28px", fontSize: "1.1rem",
-              background: added ? "#22c55e" : "#fff",
-              color: added ? "#fff" : "#000",
+              background: added ? "#22c55e" : ctaHover ? "#fff" : "#000",
+              color: added ? "#fff" : ctaHover ? "#000" : "#fff",
               display: "flex", alignItems: "center", justifyContent: "space-between",
-              transition: "background 0.25s",
+              transition: "background 0.2s, color 0.2s, border-color 0.2s",
             }}>
               <span>{adding ? "Adding…" : added ? "✓ Added!" : "Add to Cart"}</span>
               <span>{price}</span>
@@ -566,8 +578,8 @@ function RelatedProducts({
         You should check out:
       </h2>
       {/* overflow:visible so stickers can fly outside card bounds */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20,
-        overflow: "visible" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 415px))", gap: 25,
+        overflow: "visible", justifyContent: "center", justifyItems: "center" }}>
         {products.map((p: any, i: number) => (
           <RelatedProductCard
             key={p.id ?? i}
