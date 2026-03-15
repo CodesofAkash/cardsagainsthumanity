@@ -47,6 +47,8 @@ const Navbar       = dynamic(() => import("@/components/Navbar"),       { ssr: f
 
 function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSlot, stealSlot, stuffSlot, footerSlot }: ClientShellProps) {
   const { cartData, cartCount, cartOpen, checkoutOpen, setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCartCtx();
+  const cartSubtotal = (cartData as any)?.cart?.subtotal || 0;
+  const cartCurrencyCode = ((cartData as any)?.cart?.currency_code as string | undefined) || "usd";
 
   return (
     <>
@@ -73,6 +75,8 @@ function PageContent({ cmsHome, quotes, buyCardItems, phrases, faqItems, aboutSl
         <HeroSection
           quotes={quotes}
           cartCount={cartCount}
+          cartSubtotalCents={cartSubtotal}
+          cartCurrencyCode={cartCurrencyCode}
           cartOpen={cartOpen}
           onCartOpen={() => setCartOpen(true)}
           onCartClose={() => setCartOpen(false)}

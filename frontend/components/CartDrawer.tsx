@@ -14,6 +14,9 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
   const subtotal = cartData?.cart?.subtotal || 0;
   const cartId = cartData?.cart?.id;
   const isOpen = open && items.length > 0;
+  const NAVBAR_HEIGHT = 72;
+  const DRAWER_WIDTH_PX = 380;
+  const controlBtnCls = "bg-white text-black border-[3px] border-black rounded-full hover:bg-black hover:text-white transition-colors";
 
   async function changeQty(itemId: string, qty: number) {
     if (!cartId) return;
@@ -45,8 +48,10 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/20"
+        className="fixed left-0 bottom-0 bg-transparent"
         style={{
+          top: NAVBAR_HEIGHT,
+          right: DRAWER_WIDTH_PX,
           zIndex: 120,
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? "auto" : "none",
@@ -55,8 +60,11 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         onClick={onClose}
       />
       <div
-        className="fixed top-0 right-0 h-full w-95 bg-white shadow-2xl flex flex-col"
+        className="fixed right-0 bg-white flex flex-col"
         style={{
+          top: NAVBAR_HEIGHT,
+          width: DRAWER_WIDTH_PX,
+          height: `calc(100svh - ${NAVBAR_HEIGHT}px)`,
           zIndex: 121,
           transform: isOpen ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.56s cubic-bezier(0.22, 1, 0.36, 1)",
@@ -64,55 +72,56 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
+        <div className="relative flex items-center justify-center px-6 pt-5 pb-5">
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-sm text-black hover:border-black transition-colors"
+            className={`absolute left-6 w-10 h-10 flex items-center justify-center text-xl font-black leading-none ${controlBtnCls}`}
           >
             ✕
           </button>
-          <h2 className="text-2xl font-black text-black" style={{ fontFamily: "Georgia, serif" }}>
+          <h2 className="text-2xl font-medium text-black" style={{ fontFamily: "Georgia, serif" }}>
             Cart
           </h2>
-          {items.length > 0 && (
-            <span className="ml-auto text-sm text-gray-400">
-              {items.reduce((s: number, i: any) => s + i.quantity, 0)} item(s)
-            </span>
-          )}
         </div>
+        <div className="mx-6 border-t-[3px] border-gray-500" />
 
         {/* Items */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="divide-y divide-gray-100">
+          <div>
             {items.map((item: any) => (
-                <div key={item.id} className="flex gap-4 py-4 items-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
+                <div key={item.id} className="flex gap-5 py-6 items-center border-b-[3px] border-gray-400">
+                  <div className="relative w-20 h-20 bg-white shrink-0 overflow-visible">
                     {item.thumbnail && (
-                      <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
+                      <img
+                        src={item.thumbnail}
+                        alt={item.title}
+                        className="relative z-20 w-full h-full object-contain transition-transform duration-300 ease-out hover:scale-110 hover:-rotate-6"
+                      />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-black truncate">
+                    <p className="font-medium text-[1.2rem] leading-tight text-black truncate">
                       {item.product_title || item.title}
                     </p>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-3 mt-4">
                       <button
                         onClick={() => changeQty(item.id, item.quantity - 1)}
-                        className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-black hover:border-black transition-colors"
+                        className={`w-5 h-5 p-0 flex items-center justify-center text-[11px] font-black leading-none ${controlBtnCls}`}
                       >−</button>
-                      <span className="text-sm font-bold text-black w-5 text-center">{item.quantity}</span>
+                      <span className="text-lg font-medium text-black min-w-6 text-center leading-none">{item.quantity}</span>
                       <button
                         onClick={() => changeQty(item.id, item.quantity + 1)}
-                        className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-black hover:border-black transition-colors"
+                        className={`w-5 h-5 p-0 flex items-center justify-center text-[11px] font-black leading-none ${controlBtnCls}`}
                       >+</button>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-black">${((item.unit_price || 0) / 100).toFixed(2)}</p>
+                  <div className="text-right shrink-0 flex flex-col items-end gap-4 self-start">
                     <button
                       onClick={() => changeQty(item.id, 0)}
-                      className="text-gray-400 hover:text-black text-xs mt-1 transition-colors"
-                    >Remove</button>
+                      className={`w-5 h-5 p-0 flex items-center justify-center text-[11px] font-black leading-none ${controlBtnCls}`}
+                      aria-label={`Remove ${item.product_title || item.title}`}
+                    >✕</button>
+                    <p className="font-medium text-[1.35rem] leading-none text-black">${((item.unit_price || 0) / 100).toFixed(2)}</p>
                   </div>
                 </div>
             ))}
@@ -121,20 +130,19 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-gray-200 px-6 py-5">
-            <div className="flex justify-between mb-4">
-              <span className="font-black text-lg text-black">Subtotal</span>
-              <span className="font-black text-lg text-black">${(subtotal / 100).toFixed(2)}</span>
+          <div className="px-6 py-5">
+            <div className="border-t-[3px] border-gray-500 mb-3" />
+            <div className="flex justify-between mb-3">
+                <span className="font-bold text-2xl text-black">Subtotal</span>
+                <span className="font-bold text-2xl text-black">${(subtotal / 100).toFixed(2)}</span>
             </div>
+            <div className="border-t-[3px] border-gray-500 mb-3" />
             <button
               onClick={() => { onClose(); onCheckout(); }}
-              className="w-full bg-black text-white font-black text-lg py-4 rounded-xl hover:bg-gray-800 transition-colors"
+              className="w-full font-bold text-xl py-1.5 bg-black text-white border-2 border-black rounded-full hover:bg-white hover:text-black transition-colors"
             >
               Check Out
             </button>
-            <a href="/auth" className="block text-center text-sm text-gray-400 mt-3 hover:text-black transition-colors">
-              Sign in for faster checkout
-            </a>
           </div>
         )}
       </div>

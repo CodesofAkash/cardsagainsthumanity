@@ -1,6 +1,4 @@
-// medusa/src/subscribers/sync-to-payload.js
-
-async function syncToPayload({ event, container }) {
+const syncToPayload = async ({ event, container }: any) => {
   const query = container.resolve('query')
 
   const { data } = await query.graph({
@@ -42,11 +40,8 @@ async function syncToPayload({ event, container }) {
   }
 }
 
-const config = {
-  event: 'product.updated',
-}
+export default syncToPayload
 
-module.exports = {
-  default: syncToPayload,
-  config,
+export const config = {
+  event: ['product.updated'],
 }

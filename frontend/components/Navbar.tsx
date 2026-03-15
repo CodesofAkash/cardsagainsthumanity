@@ -8,14 +8,33 @@ import Link from "next/link";
 const MENU_CLOSE_MS = 440;
 const CART_TRANSITION_MS = 440;
 
+function formatCartPrice(amountCents: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode.toUpperCase(),
+      minimumFractionDigits: 2,
+    }).format(amountCents / 100);
+  } catch {
+    return `$${(amountCents / 100).toFixed(2)}`;
+  }
+}
+
 export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: unknown; alwaysVisible?: boolean }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeMenu, setActiveMenu] = useState<"shop" | "about" | null>(null);
   const [renderedMenu, setRenderedMenu] = useState<"shop" | "about" | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [cartIconHovered, setCartIconHovered] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { cartCount, cartOpen, setCartOpen } = useCartCtx();
+  const { cartCount, cartOpen, setCartOpen, cartData } = useCartCtx();
+
+  const cartSubtotal = (cartData as any)?.cart?.subtotal || 0;
+  const cartCurrencyCode = ((cartData as any)?.cart?.currency_code as string | undefined) || "usd";
+  const cartIconLabel = cartCount > 0
+    ? (cartIconHovered ? formatCartPrice(cartSubtotal, cartCurrencyCode) : String(cartCount))
+    : "";
 
   // Show navbar after scrolling
   useEffect(() => {
@@ -199,7 +218,9 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
             {/* Cart */}
             <button
               onClick={toggleCart}
-              className="relative flex items-center hover:opacity-70 transition-opacity"
+              onMouseEnter={() => setCartIconHovered(true)}
+              onMouseLeave={() => setCartIconHovered(false)}
+              className="relative flex items-center"
               aria-label="Open cart"
             >
               <CartIcon />
@@ -207,12 +228,21 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
               <span
                 className="absolute font-extrabold"
                 style={{
-                  fontSize: "20px",
-                  top: "-6px",
-                  right: "20px",
+                  fontSize: cartIconHovered && cartCount > 0 ? "12px" : "20px",
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  top: cartIconHovered && cartCount > 0 ? "46%" : "-6px",
+                  left: cartIconHovered && cartCount > 0 ? "50%" : "auto",
+                  right: cartIconHovered && cartCount > 0 ? "auto" : "20px",
+                  transform: cartIconHovered && cartCount > 0 ? "translate(-50%, -52%)" : "none",
+                  transition: "font-size 0.15s ease, left 0.15s ease, right 0.15s ease, top 0.15s ease, transform 0.15s ease",
+                  whiteSpace: "nowrap",
+                  lineHeight: 1,
+                  textAlign: "center",
+                  pointerEvents: "none",
                 }}
               >
-                {cartCount}
+                {cartIconLabel}
               </span>
             </button>
 

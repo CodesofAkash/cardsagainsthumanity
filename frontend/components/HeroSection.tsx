@@ -12,6 +12,18 @@ const AUTO_CYCLE_MS     = 10_000;
 const CLICK_FLY_DELAY_MS = 700;
 const TABLE_DROP_Y      = 18;
 
+function formatCartPrice(amountCents: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode.toUpperCase(),
+      minimumFractionDigits: 2,
+    }).format(amountCents / 100);
+  } catch {
+    return `$${(amountCents / 100).toFixed(2)}`;
+  }
+}
+
 const CARD_SETS = [
   {
     black: "I only saw my father cry twice: once after Mom died, and once after ___________.",
@@ -471,6 +483,8 @@ function WordmarkSVG() {
 interface HeroSectionProps {
   quotes:       { quote: string; source: string }[];
   cartCount?:   number;
+  cartSubtotalCents?: number;
+  cartCurrencyCode?: string;
   cartOpen?:    boolean;
   onCartOpen?:  () => void;
   onCartClose?: () => void;
@@ -480,6 +494,8 @@ interface HeroSectionProps {
 export default function HeroSection({
   quotes,
   cartCount   = 0,
+  cartSubtotalCents = 0,
+  cartCurrencyCode = "usd",
   cartOpen    = false,
   onCartOpen  = () => {},
   onCartClose = () => {},
@@ -513,6 +529,7 @@ export default function HeroSection({
   const [activeMenu,  setActiveMenu]  = useState<"shop" | "about" | null>(null);
   const [renderedMenu, setRenderedMenu] = useState<"shop" | "about" | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [cartIconHovered, setCartIconHovered] = useState(false);
   const [flipped,     setFlipped]     = useState<boolean[]>(Array(6).fill(false));
 
   // ─── Stable ref-callback for white cards ──────────────────────────
@@ -885,6 +902,9 @@ export default function HeroSection({
   const set      = CARD_SETS[setIdx];
   const btnCls   = "text-white flex items-center gap-1 bg-transparent border-none cursor-pointer hover:opacity-70 transition-opacity";
   const btnStyle: React.CSSProperties = { fontSize: "28px", fontWeight: 800, fontFamily: "inherit" };
+  const cartIconLabel = cartCount > 0
+    ? (cartIconHovered ? formatCartPrice(cartSubtotalCents, cartCurrencyCode) : String(cartCount))
+    : "";
 
   const chevron = (open: boolean) => (
     <svg
@@ -929,15 +949,30 @@ export default function HeroSection({
           </button>
           <button
             onClick={toggleCart}
-            className="relative flex items-center hover:opacity-70 transition-opacity"
+            onMouseEnter={() => setCartIconHovered(true)}
+            onMouseLeave={() => setCartIconHovered(false)}
+            className="relative flex items-center"
             aria-label="Open cart"
           >
             <CartIcon />
             <span
               className="absolute font-extrabold"
-              style={{ fontSize: "20px", top: "-6px", right: "20px" }}
+              style={{
+                fontSize: cartIconHovered && cartCount > 0 ? "12px" : "20px",
+                fontWeight: 800,
+                color: "#ffffff",
+                top: cartIconHovered && cartCount > 0 ? "46%" : "-6px",
+                left: cartIconHovered && cartCount > 0 ? "50%" : "auto",
+                right: cartIconHovered && cartCount > 0 ? "auto" : "20px",
+                transform: cartIconHovered && cartCount > 0 ? "translate(-50%, -52%)" : "none",
+                transition: "font-size 0.15s ease, left 0.15s ease, right 0.15s ease, top 0.15s ease, transform 0.15s ease",
+                whiteSpace: "nowrap",
+                lineHeight: 1,
+                textAlign: "center",
+                pointerEvents: "none",
+              }}
             >
-              {cartCount}
+              {cartIconLabel}
             </span>
           </button>
         </div>
