@@ -88,19 +88,19 @@ const SHOP_FALLBACK_COLS: ShopCard[] = [
   {
     label: "All Products",
     href: "/products/more-cah",
-    img: "https://img.cah.io/images/vc07edlh/production/c1f921d8c8fd60969110124ebb20ad5d9878861c-1080x1080.png?auto=format&q=75&w=600",
+    img: "https://cardsagainsthumanity-cms.vercel.app/api/media/file/mcah",
     bg: "#7b5cf0",
   },
   {
     label: "Expansions",
-    href: "#",
-    img: "https://img.cah.io/images/vc07edlh/production/31fcc3f68a626462e5707bcc5ce19ee716f2e173-1080x1080.png?auto=format&q=75&w=600",
+    href: "/products/more-cah",
+    img: "https://cardsagainsthumanity-cms.vercel.app/api/media/file/tales",
     bg: "#e8c53a",
   },
   {
     label: "Twists",
-    href: "#",
-    img: "https://img.cah.io/images/vc07edlh/production/1acdec5a623b0761a127ac03492b998879ead549-680x680.png?auto=format&q=75&w=600",
+    href: "/products/more-cah",
+    img: "https://cardsagainsthumanity-cms.vercel.app/api/media/file/bundle",
     bg: "#5bc8d4",
   },
 ];
