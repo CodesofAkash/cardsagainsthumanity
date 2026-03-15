@@ -22,6 +22,39 @@ function cmsImg(url?: string) {
   return `${CMS_URL}${url}`;
 }
 
+type CMSUpload = string | { url?: string | null } | null | undefined;
+type ProductImageRow = { image?: CMSUpload } | null | undefined;
+type ProductWithMedia = {
+  mainImage?: CMSUpload;
+  galleryImages?: ProductImageRow[] | null;
+  images?: ProductImageRow[] | null;
+};
+
+function getUploadUrl(upload: CMSUpload): string {
+  if (!upload) return "";
+  if (typeof upload === "string") return cmsImg(upload);
+  return cmsImg(upload.url ?? undefined);
+}
+
+function resolveProductMedia(product: ProductWithMedia | null | undefined): { mainImage: string; galleryImages: string[] } {
+  if (!product) return { mainImage: "", galleryImages: [] };
+
+  const fromGallery = (product.galleryImages ?? [])
+    .map((entry: ProductImageRow) => getUploadUrl(entry?.image))
+    .filter(Boolean);
+
+  const fromLegacy = (product.images ?? [])
+    .map((entry: ProductImageRow) => getUploadUrl(entry?.image))
+    .filter(Boolean);
+
+  const all = Array.from(new Set([...fromGallery, ...fromLegacy]));
+  const explicitMain = getUploadUrl(product.mainImage);
+  const mainImage = explicitMain || all[0] || "";
+  const galleryImages = Array.from(new Set([mainImage, ...all].filter(Boolean)));
+
+  return { mainImage, galleryImages };
+}
+
 /* ─── CAH sticker images — 3 unique ones, cycled per product ─────────── */
 const CAH_STICKERS = [
   "https://cdn.sanity.io/images/vc07edlh/production/d98a87617638bf60abb3bd34aae39e710f2ec718-81x81.svg",
@@ -36,13 +69,49 @@ const INJECT_CSS = `
     50%  { transform: rotate(6deg); }
     100% { transform: rotate(-6deg); }
   }
-  @keyframes cahImgSlideIn {
-    from { transform: translateX(60px); opacity: 0; }
-    to   { transform: translateX(0);   opacity: 1; }
+  @keyframes cahImgSlideInFromRight {
+    from { transform: translateX(120%); }
+    to   { transform: translateX(0); }
   }
-  @keyframes cahImgSlideOut {
-    from { transform: translateX(0);    opacity: 1; }
-    to   { transform: translateX(-60px); opacity: 0; }
+  @keyframes cahImgSlideOutToLeft {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-120%); }
+  }
+  @keyframes cahImgSlideInFromLeft {
+    from { transform: translateX(-120%); }
+    to   { transform: translateX(0); }
+  }
+  @keyframes cahImgSlideOutToRight {
+    from { transform: translateX(0); }
+    to   { transform: translateX(120%); }
+  }
+  @keyframes cahPanelScaleIn {
+    from { transform: scale(0.22); opacity: 0.35; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  @keyframes cahPanelScaleOut {
+    from { transform: scale(1); opacity: 1; }
+    to   { transform: scale(0.14); opacity: 0; }
+  }
+  .cah-panel-control {
+    background: #f4f4f4;
+    color: #111;
+    border: 2px solid #111;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .cah-panel-control:hover {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+  .cah-panel-control:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .cah-panel-control:disabled:hover {
+    background: #f4f4f4;
+    color: #111;
+    border-color: #111;
   }
   @media (prefers-reduced-motion: reduce) {
     .cah-badge-spin { animation: none !important; }
@@ -112,86 +181,173 @@ function StarburstBadge({ text, size = 80 }: { text: string; size?: number }) {
 
 /* ─── ImageViewer ────────────────────────────────────────────────────── */
 function ImageViewer({ images }: { images: string[] }) {
-  const [open, setOpen]       = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [viewIdx, setViewIdx] = useState(0);
+  const [animKey, setAnimKey] = useState(0);
   const [sliding, setSliding] = useState<"in" | "out" | null>(null);
-  const imgKey = useRef(0);
+  const [slideDir, setSlideDir] = useState<"prev" | "next">("next");
+  const currentIdx = images.length ? viewIdx % images.length : 0;
+  const autoAdvanceTimer = useRef<number | null>(null);
+
+  const clearAutoAdvance = useCallback(() => {
+    if (autoAdvanceTimer.current !== null) {
+      window.clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    clearAutoAdvance();
+    if (expanded || images.length < 2) return undefined;
+
+    autoAdvanceTimer.current = window.setTimeout(() => {
+      setSlideDir("next");
+      setSliding("out");
+      window.setTimeout(() => {
+        setViewIdx((i) => (i + 1) % images.length);
+        setAnimKey((k) => k + 1);
+        setSliding("in");
+        window.setTimeout(() => setSliding(null), 420);
+      }, 120);
+    }, 5000);
+
+    return clearAutoAdvance;
+  }, [clearAutoAdvance, currentIdx, expanded, images.length]);
 
   const navigate = useCallback((dir: "prev" | "next") => {
+    if (!images.length) return;
+    clearAutoAdvance();
+    setSlideDir(dir);
     setSliding("out");
     setTimeout(() => {
       setViewIdx(i => dir === "next"
         ? (i + 1) % images.length
         : (i - 1 + images.length) % images.length);
-      imgKey.current++;
+      setAnimKey((k) => k + 1);
       setSliding("in");
       setTimeout(() => setSliding(null), 400);
-    }, 220);
-  }, [images.length]);
+    }, 120);
+  }, [clearAutoAdvance, images.length]);
 
-  if (images.length < 2) return null;
+  const closeExpanded = useCallback(() => {
+    setIsClosing(true);
+    window.setTimeout(() => {
+      setExpanded(false);
+      setIsClosing(false);
+    }, 320);
+  }, []);
+
+  if (!images.length) return null;
 
   return (
-    <>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {images.map((src, i) => (
-          <button key={i} onClick={() => { setViewIdx(i); setOpen(true); }}
-            style={{ width: 68, height: 68, border: "2px solid rgba(255,255,255,0.25)",
-              borderRadius: 10, overflow: "hidden", background: "#111", flexShrink: 0, cursor: "pointer",
-              transition: "border-color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = "white")}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)")}>
-            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          </button>
-        ))}
-      </div>
-      {open && (
+    <div style={{ position: "absolute", bottom: -72, left: -120, zIndex: 50 }}>
+      {!expanded && (
+        <button
+          onClick={() => setExpanded(true)}
+          aria-label="Open product gallery"
+          style={{
+            width: 92,
+            height: 92,
+            borderRadius: 14,
+            border: "2px solid rgba(255,255,255,0.6)",
+            background: "#f2f2f2",
+            overflow: "hidden",
+            cursor: "pointer",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
+        >
+          <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#fff", borderRadius: 12 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              key={animKey}
+              src={images[currentIdx]}
+              alt=""
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                padding: 8,
+                animation: sliding === "in"
+                  ? slideDir === "next"
+                    ? "cahImgSlideInFromRight 0.42s ease forwards"
+                    : "cahImgSlideInFromLeft 0.42s ease forwards"
+                  : sliding === "out"
+                    ? slideDir === "next"
+                      ? "cahImgSlideOutToLeft 0.24s ease forwards"
+                      : "cahImgSlideOutToRight 0.24s ease forwards"
+                    : "none",
+              }}
+            />
+          </div>
+        </button>
+      )}
+
+      {(expanded || isClosing) && (
         <div style={{
-          position: "absolute", bottom: 0, left: 0,
           width: "clamp(320px,42vw,520px)",
-          background: "#fff", borderRadius: "0 16px 0 0", zIndex: 50,
-          overflow: "hidden", boxShadow: "0 -4px 40px rgba(0,0,0,0.6)",
+          background: "#fff",
+          color: "#000",
+          borderRadius: 24,
+          border: "2px solid #000",
+          zIndex: 50,
+          overflow: "hidden",
+          boxShadow: "0 18px 44px rgba(0,0,0,0.55)",
+          transformOrigin: "left bottom",
+          animation: isClosing
+            ? "cahPanelScaleOut 0.32s cubic-bezier(0.4, 0, 1, 1) forwards"
+            : "cahPanelScaleIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-            <button onClick={() => setOpen(false)}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none",
-                border: "1.5px solid #000", borderRadius: 9999, padding: "6px 14px",
-                fontWeight: 900, fontSize: "0.85rem", cursor: "pointer" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
+            <button onClick={closeExpanded}
+              className="cah-panel-control"
+              style={{ display: "flex", alignItems: "center", gap: 6,
+                borderRadius: 9999, padding: "6px 14px",
+                fontWeight: 950, fontSize: "1rem", cursor: "pointer" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75">
+                <path d="M18 6L6 18M6 18H14M6 18V10"/>
               </svg>
               HIDE
             </button>
             <div style={{ display: "flex", gap: 8 }}>
               {(["prev","next"] as const).map(dir => (
                 <button key={dir} onClick={() => navigate(dir)}
-                  style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #000",
-                    background: "none", cursor: "pointer", display: "flex",
-                    alignItems: "center", justifyContent: "center" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points={dir === "prev" ? "15 18 9 12 15 6" : "9 18 15 12 9 6"} />
-                  </svg>
+                  aria-label={dir === "prev" ? "Previous image" : "Next image"}
+                  className="cah-panel-control"
+                  disabled={images.length < 2}
+                  style={{ width: 42, height: 42, borderRadius: "50%",
+                    cursor: images.length < 2 ? "not-allowed" : "pointer", display: "flex",
+                    alignItems: "center", justifyContent: "center", fontWeight: 950, fontSize: "1.05rem", lineHeight: 1 }}>
+                  <span>{dir === "prev" ? "<-" : "->"}</span>
                 </button>
               ))}
             </div>
           </div>
+
           <div style={{ height: "clamp(280px,35vw,420px)", display: "flex", alignItems: "center",
             justifyContent: "center", background: "#fff", padding: 24, overflow: "hidden" }}>
-            <img key={imgKey.current} src={images[viewIdx]} alt=""
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img key={animKey} src={images[currentIdx]} alt=""
               style={{
                 maxHeight: "100%", maxWidth: "100%", objectFit: "contain",
                 animation: sliding === "in"
-                  ? "cahImgSlideIn 0.35s ease forwards"
+                  ? slideDir === "next"
+                    ? "cahImgSlideInFromRight 0.35s ease forwards"
+                    : "cahImgSlideInFromLeft 0.35s ease forwards"
                   : sliding === "out"
-                    ? "cahImgSlideOut 0.22s ease forwards"
+                    ? slideDir === "next"
+                      ? "cahImgSlideOutToLeft 0.22s ease forwards"
+                      : "cahImgSlideOutToRight 0.22s ease forwards"
                     : "none",
               }} />
           </div>
+
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -228,10 +384,7 @@ function RelatedProductCard({
 
   const stickerSrc = CAH_STICKERS[stickerIdx % CAH_STICKERS.length];
 
-  const images: string[] = (product.images ?? [])
-    .map((img: any) => img.image?.url ? cmsImg(img.image.url) : "")
-    .filter(Boolean);
-  const mainImg   = images[0] || null;
+  const { mainImage: mainImg } = resolveProductMedia(product);
   const price     = product.price ? `€${(product.price / 100).toFixed(2)}` : null;
   const href      = product.slug  ? `/products/${product.slug}` : "#";
   const variantId = product.variantId || "";
@@ -530,10 +683,7 @@ function ProductPageContent() {
     finally { setAdding(false); }
   }
 
-  const images: string[] = product?.images?.length
-    ? product.images.map((img: any) => img.image?.url ? cmsImg(img.image.url) : "").filter(Boolean)
-    : [];
-  const mainImage    = images[0] || "";
+  const { mainImage, galleryImages } = resolveProductMedia(product);
   const priceDisplay = product?.price ? `€${(product.price / 100).toFixed(2)}` : "€29";
 
   if (loading) return (
@@ -583,7 +733,7 @@ function ProductPageContent() {
                 </div>
               )}
             </div>
-            <ImageViewer images={images} />
+            <ImageViewer images={galleryImages} />
           </div>
 
           {/* Right: info */}

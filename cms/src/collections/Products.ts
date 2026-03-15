@@ -23,8 +23,34 @@ const Products: CollectionConfig = {
       admin: { description: 'Price in cents (e.g. 2900 = $29.00)' },
     },
     {
+      name: 'mainImage',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description: 'Primary product image shown in product cards and product detail page.',
+      },
+    },
+    {
+      name: 'galleryImages',
+      type: 'array',
+      admin: {
+        description: 'Additional product images used in the expandable gallery preview.',
+      },
+      fields: [
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          required: true,
+        },
+      ],
+    },
+    {
       name: 'images',
       type: 'array',
+      admin: {
+        description: 'Legacy image list. Prefer using Main Image + Gallery Images for new content.',
+      },
       fields: [
         {
           name: 'image',

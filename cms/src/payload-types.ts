@@ -143,6 +143,9 @@ export interface User {
   id: string;
   updatedAt: string;
   createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
   email: string;
   resetPasswordToken?: string | null;
   resetPasswordExpiration?: string | null;
@@ -198,6 +201,22 @@ export interface Product {
    * Price in cents (e.g. 2900 = $29.00)
    */
   price?: number | null;
+  /**
+   * Primary product image shown in product cards and product detail page.
+   */
+  mainImage?: (string | null) | Media;
+  /**
+   * Additional product images used in the expandable gallery preview.
+   */
+  galleryImages?:
+    | {
+        image: string | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Legacy image list. Prefer using Main Image + Gallery Images for new content.
+   */
   images?:
     | {
         image?: (string | null) | Media;
@@ -531,6 +550,9 @@ export interface PayloadMigration {
 export interface UsersSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
   email?: T;
   resetPasswordToken?: T;
   resetPasswordExpiration?: T;
@@ -579,6 +601,13 @@ export interface ProductsSelect<T extends boolean = true> {
         id?: T;
       };
   price?: T;
+  mainImage?: T;
+  galleryImages?:
+    | T
+    | {
+        image?: T;
+        id?: T;
+      };
   images?:
     | T
     | {
