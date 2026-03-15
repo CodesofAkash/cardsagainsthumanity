@@ -11,10 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: "Home - Cards Against Humanity",
-    template: "%s - Cards Against Humanity",
-  },
+  title: "Cards Against Humanity",
   description: "A party game for horrible people.",
   icons: {
     icon: "https://www.cardsagainsthumanity.com/favicon/apple-touch-icon-114x114.png",
