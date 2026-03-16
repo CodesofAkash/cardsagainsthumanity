@@ -13,8 +13,8 @@ const COUNTRY_CODES: Record<string, string> = {
   Japan:"jp",Brazil:"br",Mexico:"mx",
 };
 
-type StepName = "country"|"address"|"contact"|"shipping"|"payment"|"done";
-const STEP_ORDER: StepName[] = ["country","address","contact","shipping","payment","done"];
+type StepName = "country"|"address"|"addressReview"|"contact"|"shipping"|"payment"|"done";
+const STEP_ORDER: StepName[] = ["country","address","addressReview","contact","shipping","payment","done"];
 
 interface Props { open:boolean; onClose:()=>void; cartData:any; onOrderComplete:()=>void; }
 
@@ -44,7 +44,13 @@ function validateStep(step: StepName, data: any): string | null {
   if (step === "address") {
     if (!data.addr.full_name.trim()) return "Please enter your full name.";
     if (!data.addr.street.trim()) return "Please enter your street address.";
+    if (!data.addr.postal.trim()) return "Please enter your postal code.";
+  }
+  if (step === "addressReview") {
+    if (!data.addr.full_name.trim()) return "Please enter your full name.";
+    if (!data.addr.street.trim()) return "Please enter your street address.";
     if (!data.addr.city.trim()) return "Please enter your city.";
+    if (!data.addr.state.trim()) return "Please enter your region.";
     if (!data.addr.postal.trim()) return "Please enter your postal code.";
   }
   if (step === "contact") {
@@ -68,6 +74,12 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   const stepRef   = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const animRef   = useRef(false);
+  const addressHeadingRef = useRef<HTMLHeadingElement>(null);
+  const addressFooterRef = useRef<HTMLDivElement>(null);
+  const addressInputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const addressReviewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const addressReviewFooterRef = useRef<HTMLDivElement>(null);
+  const addressReviewInputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const cardNumberRef = useRef<HTMLInputElement>(null);
   const expiryRef = useRef<HTMLInputElement>(null);
   const cvcRef = useRef<HTMLInputElement>(null);
@@ -76,18 +88,28 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   const [country, setCountry] = useState("India");
   const [addr, setAddr] = useState({ full_name:"", street:"", unit:"", city:"", state:"", postal:"" });
   const [contact, setContact] = useState({ email:"", phone:"" });
+  const [isGift, setIsGift] = useState(false);
+  const [hasSavingsCode, setHasSavingsCode] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
   const [selectedShipping, setSelectedShipping] = useState("");
   const [card, setCard] = useState({ number:"", expiry:"", cvc:"", postal:"" });
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [error, setError] = useState("");
+  const [recipientHover, setRecipientHover] = useState(false);
+  const recipientPencilRef = useRef<HTMLSpanElement>(null);
 
   const cartId   = cartData?.cart?.id;
   const subtotal = cartData?.cart?.subtotal || 0;
   const currencyCode = ((cartData?.cart?.currency_code as string | undefined) || "usd").toUpperCase();
   const subtotalLabel = formatCartPrice(subtotal, currencyCode);
   const cc = (c: string) => COUNTRY_CODES[c] || c.slice(0,2).toLowerCase();
+  const recipientAddressLines = [
+    addr.street,
+    addr.unit,
+    [addr.city, addr.state, addr.postal].filter(Boolean).join(", "),
+    country,
+  ].filter((line) => line && line.trim().length > 0);
 
   function handleCardNumberChange(raw: string) {
     const formatted = formatCardNumber(raw);
@@ -122,24 +144,124 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
     }
   }, [open]);
 
+  useEffect(() => {
+    const el = recipientPencilRef.current;
+    if (!el) return;
+
+    gsap.killTweensOf(el);
+    if (recipientHover) {
+      gsap.to(el, {
+        y: 0,
+        opacity: 1,
+        duration: 0.26,
+        ease: "back.out(1.7)",
+      });
+    } else {
+      gsap.to(el, {
+        y: 14,
+        opacity: 0,
+        duration: 0.16,
+        ease: "power2.in",
+      });
+    }
+  }, [recipientHover]);
+
   // ── Step GSAP transition ──────────────────────────────────────────────────
   function goTo(next: StepName, dir: "forward"|"back" = "forward") {
     if (animRef.current || !stepRef.current) return;
     animRef.current = true;
     setError("");
     const el = stepRef.current;
-    const outX = dir === "forward" ? -60 : 60;
-    const inX  = dir === "forward" ?  80 : -80;
-    gsap.to(el, { x:outX, opacity:0, duration:0.2, ease:"power2.in",
+    const forward = dir === "forward";
+    const runupX = forward ? 38 : -38;
+    const outX = forward
+      ? -(typeof window !== "undefined" ? window.innerWidth * 1.35 : 1800)
+      : (typeof window !== "undefined" ? window.innerWidth * 1.35 : 1800);
+    const inX = forward
+      ? (typeof window !== "undefined" ? window.innerWidth * 1.25 : 1500)
+      : -(typeof window !== "undefined" ? window.innerWidth * 1.25 : 1500);
+
+    gsap.killTweensOf(el);
+    gsap.timeline({
       onComplete: () => {
         setStep(next);
-        gsap.fromTo(el, { x:inX, opacity:0 },
-          { x:0, opacity:1, duration:0.38, ease:"back.out(1.7)",
-            onComplete: () => { animRef.current = false; }
+        requestAnimationFrame(() => {
+          if (!stepRef.current) {
+            animRef.current = false;
+            return;
           }
-        );
-      }
-    });
+
+          const root = stepRef.current;
+          // Reset parent after exit animation so next step is actually visible.
+          gsap.set(root, { x: 0, y: 0, opacity: 1 });
+
+          if (next === "address" || next === "addressReview") {
+            const addressInEls = (
+              next === "address"
+                ? [addressHeadingRef.current, addressFooterRef.current]
+                : [addressReviewHeadingRef.current, addressReviewFooterRef.current]
+            ).filter(Boolean) as HTMLElement[];
+
+            const addressInputEls = (
+              next === "address"
+                ? addressInputRefs.current
+                : addressReviewInputRefs.current
+            ).filter(Boolean) as HTMLInputElement[];
+
+            if (!addressInEls.length && !addressInputEls.length) {
+              animRef.current = false;
+              return;
+            }
+
+            gsap.killTweensOf(addressInEls);
+            gsap.killTweensOf(addressInputEls);
+
+            gsap.fromTo(
+              addressInEls,
+              { x: inX, y: 8, opacity: 0.9 },
+              {
+                x: 0,
+                y: 0,
+                opacity: 1,
+                duration: 0.22,
+                ease: "power2.out",
+                stagger: 0.04,
+              }
+            );
+
+            // Inputs stay fixed in-place and only reveal from left to right.
+            gsap.set(addressInputEls, { x: 0, y: 0 });
+            gsap.fromTo(
+              addressInputEls,
+              { clipPath: "inset(0 100% 0 0)", opacity: 1 },
+              {
+                clipPath: "inset(0 0% 0 0)",
+                duration: 0.34,
+                ease: "power2.out",
+                stagger: 0.055,
+                onComplete: () => { animRef.current = false; },
+              }
+            );
+            return;
+          }
+
+          gsap.fromTo(
+            root,
+            { x: inX, y: 8, opacity: 0.88 },
+            {
+              x: 0,
+              y: 0,
+              opacity: 1,
+              duration: 0.36,
+              ease: "back.out(1.55)",
+              onComplete: () => { animRef.current = false; },
+            }
+          );
+        });
+      },
+    })
+      .to(el, { x: runupX, opacity: 1, duration: 0.07, ease: "power1.out" })
+      .to(el, { x: outX, opacity: 0, duration: 0.16, ease: "power4.in" });
   }
 
   function goBack() {
@@ -161,6 +283,12 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   async function confirmAddress() {
     const err = validateStep("address", { addr, contact, card });
     if (err) { setError(err); return; }
+    goTo("addressReview");
+  }
+
+  async function confirmAddressReview() {
+    const err = validateStep("addressReview", { addr, contact, card });
+    if (err) { setError(err); return; }
     if (cartId) {
       const parts = addr.full_name.trim().split(" ");
       await fetch(`${MEDUSA_URL}/store/carts/${cartId}`, {
@@ -171,8 +299,8 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             last_name: parts.slice(1).join(" ") || "Customer",
             address_1: addr.street,
             address_2: addr.unit,
-            city: addr.city,
-            province: addr.state || addr.city,
+            city: addr.city || "N/A",
+            province: addr.state || addr.city || "N/A",
             postal_code: addr.postal,
             country_code: cc(country),
           },
@@ -310,13 +438,25 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
   const inputCls = "w-full border-2 border-black rounded-xl px-4 py-3 text-base text-black text-center font-bold focus:outline-none focus:border-blue-500 focus:bg-blue-50 transition-colors bg-white";
   const btnCls   = "bg-black text-white font-black text-lg px-10 py-4 rounded-full hover:bg-gray-800 active:scale-95 transition-all";
-  const showBack = step !== "country" && step !== "done";
+  const showBack = step !== "country" && step !== "address" && step !== "addressReview" && step !== "done";
 
   return (
     <>
       <div
+        className="fixed left-0 right-0 top-0 bg-black/15 backdrop-blur-md"
+        style={{
+          height: 72,
+          zIndex: 120,
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 0.32s ease",
+        }}
+        onClick={onClose}
+      />
+
+      <div
         ref={drawerRef}
-        className="fixed left-0 right-0 bottom-0 bg-[#ededed]"
+        className="fixed left-0 right-0 bottom-0 bg-[#ededed] rounded-t-[28px] overflow-hidden"
         style={{
           top: 72,
           transform: open ? "translateY(0)" : "translateY(100%)",
@@ -332,14 +472,14 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
             <button
               onClick={onClose}
-              className="h-9 px-4 rounded-full border-2 border-black text-black text-sm font-black tracking-wide leading-none hover:bg-black hover:text-white transition-colors"
+              className="h-9 px-4 rounded-full border-2 border-black text-black text-sm font-semibold tracking-wide leading-none hover:bg-black hover:text-white transition-colors"
             >
               ← EDIT ORDER
             </button>
 
             <div className="flex items-center gap-6">
-              <p className="text-black font-black text-[34px] leading-none whitespace-nowrap">
-                {subtotalLabel} <span className="text-lg align-middle">{currencyCode}</span>
+              <p className="text-black font-semibold text-[24px] leading-none whitespace-nowrap">
+                {subtotalLabel} <span className="text-base align-middle">{currencyCode}</span>
               </p>
               <button
                 onClick={onClose}
@@ -353,26 +493,45 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
         </div>
 
         {/* Summary bar */}
-        {step !== "country" && step !== "done" && (
+        {step !== "country" && step !== "address" && step !== "addressReview" && step !== "done" && (
           <div className="bg-black px-8 py-3 grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-white/50 uppercase text-xs font-black tracking-widest mb-0.5">Recipient</p>
-              <p className="font-black text-white truncate">{addr.full_name || "—"}</p>
-              <p className="text-white/60 text-xs truncate">{addr.street}</p>
+            <button
+              type="button"
+              onMouseEnter={() => setRecipientHover(true)}
+              onMouseLeave={() => setRecipientHover(false)}
+              onClick={() => goTo("country", "back")}
+              className="relative text-left appearance-none border-0 bg-transparent p-2 rounded-md hover:bg-white/10 transition-colors"
+              aria-label="Edit recipient details"
+            >
+              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Recipient</p>
+              <p className="font-semibold text-white leading-tight mb-1">{addr.full_name || "—"}</p>
+              <div className="text-white/75 text-xs leading-tight">
+                {recipientAddressLines.length > 0 ? recipientAddressLines.map((line, idx) => (
+                  <p key={idx}>{line}</p>
+                )) : <p>—</p>}
+              </div>
+              <span
+                ref={recipientPencilRef}
+                className="absolute right-0 bottom-0 text-sm"
+                style={{ opacity: 0, transform: "translateY(14px)" }}
+                aria-hidden="true"
+              >
+                ✎
+              </span>
+            </button>
+            <div className="p-2 rounded-md hover:bg-white/10 transition-colors">
+              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Contact</p>
+              <p className="font-semibold text-white text-xs break-all">{contact.email || "—"}</p>
             </div>
-            <div>
-              <p className="text-white/50 uppercase text-xs font-black tracking-widest mb-0.5">Contact</p>
-              <p className="font-black text-white text-xs truncate">{contact.email || "—"}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white/50 uppercase text-xs font-black tracking-widest mb-0.5">Total</p>
-              <p className="font-black text-white text-xl">${(subtotal/100).toFixed(2)}</p>
+            <div className="text-right p-2 rounded-md hover:bg-white/10 transition-colors">
+              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Total</p>
+              <p className="font-semibold text-white text-lg">${(subtotal/100).toFixed(2)}</p>
             </div>
           </div>
         )}
 
         {/* Step area */}
-        <div className="h-[calc(100svh-136px)] flex flex-col justify-center px-8 py-4 overflow-hidden relative">
+        <div className={`h-[calc(100svh-136px)] flex flex-col px-8 py-4 overflow-hidden relative ${step === "done" ? "justify-center" : "justify-start pt-10"}`}>
 
           {showBack && (
             <button onClick={goBack}
@@ -387,22 +546,22 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             </div>
           )}
 
-          <div ref={stepRef} className="w-full max-w-lg mx-auto">
+          <div ref={stepRef} className={`w-full mx-auto ${(step === "address" || step === "addressReview") ? "max-w-5xl" : "max-w-lg"}`}>
 
             {/* ── STEP 1: Country ── */}
             {step === "country" && (
               <div className="text-center">
-                <h2 className="text-[46px] font-black text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
+                <h2 className="text-[30px] font-semibold text-black mb-7 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
                   What country are we shipping to?
                 </h2>
-                <div className="relative w-full max-w-190 mx-auto mb-8">
+                <div className="relative w-full max-w-96 mx-auto mb-6">
                   <select value={country} onChange={(e) => setCountry(e.target.value)}
-                    className="w-full border border-black rounded-lg px-6 py-4 pr-14 text-[34px] font-black text-black appearance-none cursor-pointer focus:outline-none bg-white text-center">
+                    className="w-full border border-black rounded-lg px-5 py-3 pr-12 text-[18px] font-semibold text-black appearance-none cursor-pointer focus:outline-none bg-white text-center">
                     {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-2xl text-black">▾</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-xl text-black">▾</span>
                 </div>
-                <button onClick={confirmCountry} className="bg-black text-white font-black text-[34px] px-11 py-4 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
+                <button onClick={confirmCountry} className="bg-black text-white font-semibold text-[18px] px-8 py-3 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
                   Confirm Country
                 </button>
               </div>
@@ -410,58 +569,148 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
             {/* ── STEP 2: Address ── */}
             {step === "address" && (
-              <div className="text-center">
-                <h2 className="text-2xl font-black text-black mb-5" style={{ fontFamily:"Georgia,serif" }}>
+              <div className="text-center w-full max-w-5xl mx-auto">
+                <h2 ref={addressHeadingRef} className="text-[38px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
                   Where should we send this stuff?
                 </h2>
-                <div className="grid grid-cols-2 gap-2 mb-5">
+                <div className="grid grid-cols-1 gap-4 mb-6 max-w-3xl mx-auto">
                   <input placeholder="Full Name *" value={addr.full_name}
+                    ref={(el) => { addressInputRefs.current[0] = el; }}
                     onChange={(e) => setAddr((a) => ({ ...a, full_name:e.target.value }))}
-                    className={`${inputCls} col-span-2`} />
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-semibold text-black text-center focus:outline-none bg-[#ededed]" />
                   <input placeholder="Street Address *" value={addr.street}
+                    ref={(el) => { addressInputRefs.current[1] = el; }}
                     onChange={(e) => setAddr((a) => ({ ...a, street:e.target.value }))}
-                    className={`${inputCls} col-span-2`} />
-                  <input placeholder="City *" value={addr.city}
-                    onChange={(e) => setAddr((a) => ({ ...a, city:e.target.value }))}
-                    className={inputCls} />
-                  <input placeholder="State / Province" value={addr.state}
-                    onChange={(e) => setAddr((a) => ({ ...a, state:e.target.value }))}
-                    className={inputCls} />
-                  <input placeholder="Postal Code *" value={addr.postal}
-                    onChange={(e) => setAddr((a) => ({ ...a, postal:e.target.value }))}
-                    className={inputCls} />
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-semibold text-black text-center focus:outline-none bg-[#ededed]" />
                   <input placeholder="Unit # (Optional)" value={addr.unit}
+                    ref={(el) => { addressInputRefs.current[2] = el; }}
                     onChange={(e) => setAddr((a) => ({ ...a, unit:e.target.value }))}
-                    className={inputCls} />
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-semibold text-black text-center focus:outline-none bg-[#ededed]" />
+                  <input placeholder="Postal Code *" value={addr.postal}
+                    ref={(el) => { addressInputRefs.current[3] = el; }}
+                    onChange={(e) => setAddr((a) => ({ ...a, postal:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-semibold text-black text-center focus:outline-none bg-[#ededed]" />
                 </div>
-                <button onClick={confirmAddress} className={btnCls}>Submit Address</button>
+
+                <div ref={addressFooterRef} className="max-w-3xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  <label className="justify-self-start inline-flex items-center gap-3 text-[18px] text-black cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isGift}
+                      onChange={(e) => setIsGift(e.target.checked)}
+                      className="w-6 h-6 rounded border-2 border-black"
+                    />
+                    <span>
+                      This order is <strong>a gift.</strong>
+                    </span>
+                  </label>
+
+                  <button onClick={confirmAddress} className="bg-black text-white font-semibold text-[16px] px-10 py-3 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
+                    Submit Address
+                  </button>
+
+                  <label className="justify-self-end inline-flex items-center gap-3 bg-[#8BF0B6] px-4 py-3 rounded-md text-[18px] text-black cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasSavingsCode}
+                      onChange={(e) => setHasSavingsCode(e.target.checked)}
+                      className="w-6 h-6 rounded border-2 border-black"
+                    />
+                    <span>
+                      I have a <strong>savings code.</strong>
+                    </span>
+                  </label>
+                </div>
               </div>
             )}
 
-            {/* ── STEP 3: Contact ── */}
-            {step === "contact" && (
-              <div className="text-center">
-                <h2 className="text-2xl font-black text-black mb-2" style={{ fontFamily:"Georgia,serif" }}>
-                  Give us some contact info
+            {/* ── STEP 3: Address Review ── */}
+            {step === "addressReview" && (
+              <div className="text-center w-full max-w-5xl mx-auto">
+                <h2 ref={addressReviewHeadingRef} className="text-[42px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
+                  How does this address look? Edit if needed.
                 </h2>
-                <p className="text-gray-500 text-base mb-6">for confirmations and delivery.</p>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <input placeholder="Email Address *" type="email" value={contact.email}
-                    onChange={(e) => setContact((c) => ({ ...c, email:e.target.value }))}
-                    className={inputCls} autoComplete="email" />
-                  <input placeholder="Phone (optional)" type="tel" value={contact.phone}
-                    onChange={(e) => setContact((c) => ({ ...c, phone:e.target.value }))}
-                    className={inputCls} />
+
+                <div className="grid grid-cols-1 gap-4 mb-6 max-w-3xl mx-auto">
+                  <input
+                    ref={(el) => { addressReviewInputRefs.current[0] = el; }}
+                    placeholder="Full Name"
+                    value={addr.full_name}
+                    onChange={(e) => setAddr((a) => ({ ...a, full_name:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
+                  />
+                  <input
+                    ref={(el) => { addressReviewInputRefs.current[1] = el; }}
+                    placeholder="Street Address"
+                    value={addr.street}
+                    onChange={(e) => setAddr((a) => ({ ...a, street:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
+                  />
+                  <input
+                    ref={(el) => { addressReviewInputRefs.current[2] = el; }}
+                    placeholder="Address Line 2 (Optional)"
+                    value={addr.unit}
+                    onChange={(e) => setAddr((a) => ({ ...a, unit:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
+                  />
+                  <input
+                    ref={(el) => { addressReviewInputRefs.current[3] = el; }}
+                    placeholder="Region"
+                    value={addr.state}
+                    onChange={(e) => setAddr((a) => ({ ...a, state:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      ref={(el) => { addressReviewInputRefs.current[4] = el; }}
+                      placeholder="City"
+                      value={addr.city}
+                      onChange={(e) => setAddr((a) => ({ ...a, city:e.target.value }))}
+                      className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
+                    />
+                    <input
+                      ref={(el) => { addressReviewInputRefs.current[5] = el; }}
+                      placeholder="Postal Code"
+                      value={addr.postal}
+                      onChange={(e) => setAddr((a) => ({ ...a, postal:e.target.value }))}
+                      className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
+                    />
+                  </div>
                 </div>
-                <label className="flex items-center justify-center gap-2 text-sm font-bold text-black mb-6 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4" />
+
+                <div ref={addressReviewFooterRef} className="flex justify-center">
+                  <button onClick={confirmAddressReview} className="bg-black text-white font-semibold text-[16px] px-10 py-3 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
+                    Confirm Address
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 4: Contact ── */}
+            {step === "contact" && (
+              <div className="text-center w-full max-w-5xl mx-auto">
+                <h2 className="text-[46px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
+                  Give us some contact info for confirmations and delivery.
+                </h2>
+                <div className="grid grid-cols-2 gap-3 mb-5 max-w-3xl mx-auto">
+                  <input placeholder="Email Address" type="email" value={contact.email}
+                    onChange={(e) => setContact((c) => ({ ...c, email:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]" autoComplete="email" />
+                  <input placeholder="Phone (for delivery issues)" type="tel" value={contact.phone}
+                    onChange={(e) => setContact((c) => ({ ...c, phone:e.target.value }))}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]" />
+                </div>
+                <label className="flex items-center justify-center gap-3 text-[15px] font-semibold text-black mb-6 cursor-pointer">
+                  <input type="checkbox" className="w-6 h-6 rounded border-2 border-black" />
                   Email me when Cards Against Humanity makes a new thing.
                 </label>
-                <button onClick={confirmContact} className={btnCls}>Confirm Contact Info</button>
+                <button onClick={confirmContact} className="bg-black text-white font-semibold text-[16px] px-10 py-3 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
+                  Confirm Contact Info
+                </button>
               </div>
             )}
 
-            {/* ── STEP 4: Shipping ── */}
+            {/* ── STEP 5: Shipping ── */}
             {step === "shipping" && (
               <div className="text-center">
                 <h2 className="text-2xl font-black text-black mb-6" style={{ fontFamily:"Georgia,serif" }}>
@@ -494,7 +743,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
               </div>
             )}
 
-            {/* ── STEP 5: Payment ── */}
+            {/* ── STEP 6: Payment ── */}
             {step === "payment" && (
               <div className="text-center">
                 <h2 className="text-2xl font-black text-black mb-1" style={{ fontFamily:"Georgia,serif" }}>
@@ -568,7 +817,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
               </div>
             )}
 
-            {/* ── STEP 6: Done ── */}
+            {/* ── STEP 7: Done ── */}
             {step === "done" && (
               <div className="text-center">
                 <div className="text-6xl mb-4">🎉</div>
