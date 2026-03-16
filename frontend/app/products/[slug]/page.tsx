@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback, type CSSProperties, type MouseEvent, type RefObject } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   getOrCreateCart,
   fetchCartById,
@@ -130,7 +131,7 @@ function useInjectStyle(id: string, css: string) {
 
 /* ─── PlusIcons ──────────────────────────────────────────────────────── */
 function PlusIcons() {
-  const positions: React.CSSProperties[] = [
+  const positions: CSSProperties[] = [
     { top: "9%",  left: "6%" }, { top: "28%", left: "3%" },
     { top: "52%", left: "4%" }, { top: "74%", left: "3%" },
     { top: "14%", right: "2%" }, { top: "38%", right: "2%" },
@@ -179,7 +180,152 @@ function StarburstBadge({ text, size = 80 }: { text: string; size?: number }) {
   );
 }
 
-/* ─── ImageViewer ────────────────────────────────────────────────────── */
+/* ─── ImageViewer subcomponents ─────────────────────────────────────── */
+function CollapsedViewer({
+  animKey,
+  currentIdx,
+  images,
+  slideDir,
+  sliding,
+  onOpen,
+}: {
+  animKey: number;
+  currentIdx: number;
+  images: string[];
+  slideDir: "prev" | "next";
+  sliding: "in" | "out" | null;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      aria-label="Open product gallery"
+      style={{
+        width: 92,
+        height: 92,
+        borderRadius: 14,
+        border: "2px solid rgba(255,255,255,0.6)",
+        background: "#f2f2f2",
+        overflow: "hidden",
+        cursor: "pointer",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+      }}
+    >
+      <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#fff", borderRadius: 12 }}>
+        <Image
+          key={animKey}
+          src={images[currentIdx]}
+          alt=""
+          fill
+          sizes="92px"
+          loading="lazy"
+          style={{
+            objectFit: "contain",
+            padding: 8,
+            animation: sliding === "in"
+              ? slideDir === "next"
+                ? "cahImgSlideInFromRight 0.42s ease forwards"
+                : "cahImgSlideInFromLeft 0.42s ease forwards"
+              : sliding === "out"
+                ? slideDir === "next"
+                  ? "cahImgSlideOutToLeft 0.24s ease forwards"
+                  : "cahImgSlideOutToRight 0.24s ease forwards"
+                : "none",
+          }}
+        />
+      </div>
+    </button>
+  );
+}
+
+function ExpandedViewer({
+  animKey,
+  currentIdx,
+  images,
+  isClosing,
+  slideDir,
+  sliding,
+  onNavigate,
+  onClose,
+}: {
+  animKey: number;
+  currentIdx: number;
+  images: string[];
+  isClosing: boolean;
+  slideDir: "prev" | "next";
+  sliding: "in" | "out" | null;
+  onNavigate: (dir: "prev" | "next") => void;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{
+      width: "clamp(320px,42vw,520px)",
+      background: "#fff",
+      color: "#000",
+      borderRadius: 24,
+      border: "2px solid #000",
+      zIndex: 50,
+      overflow: "hidden",
+      boxShadow: "0 18px 44px rgba(0,0,0,0.55)",
+      transformOrigin: "left bottom",
+      animation: isClosing
+        ? "cahPanelScaleOut 0.32s cubic-bezier(0.4, 0, 1, 1) forwards"
+        : "cahPanelScaleIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+        <button onClick={onClose}
+          className="cah-panel-control"
+          style={{ display: "flex", alignItems: "center", gap: 6,
+            borderRadius: 9999, padding: "6px 14px",
+            fontWeight: 950, fontSize: "1rem", cursor: "pointer" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75">
+            <path d="M18 6L6 18M6 18H14M6 18V10"/>
+          </svg>
+          HIDE
+        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {( ["prev","next"] as const).map(dir => (
+            <button key={dir} onClick={() => onNavigate(dir)}
+              aria-label={dir === "prev" ? "Previous image" : "Next image"}
+              className="cah-panel-control"
+              disabled={images.length < 2}
+              style={{ width: 42, height: 42, borderRadius: "50%",
+                cursor: images.length < 2 ? "not-allowed" : "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", fontWeight: 950, fontSize: "1.05rem", lineHeight: 1 }}>
+              <span>{dir === "prev" ? "<-" : "->"}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ height: "clamp(280px,35vw,420px)", display: "flex", alignItems: "center",
+        justifyContent: "center", background: "#fff", padding: 24, overflow: "hidden", position: "relative" }}>
+        <Image
+          key={animKey}
+          src={images[currentIdx]}
+          alt=""
+          fill
+          sizes="(max-width: 1024px) 90vw, 520px"
+          loading="lazy"
+          style={{
+            objectFit: "contain",
+            animation: sliding === "in"
+              ? slideDir === "next"
+                ? "cahImgSlideInFromRight 0.35s ease forwards"
+                : "cahImgSlideInFromLeft 0.35s ease forwards"
+              : sliding === "out"
+                ? slideDir === "next"
+                  ? "cahImgSlideOutToLeft 0.22s ease forwards"
+                  : "cahImgSlideOutToRight 0.22s ease forwards"
+                : "none",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ImageViewer({ images }: { images: string[] }) {
   const [expanded, setExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -243,120 +389,35 @@ function ImageViewer({ images }: { images: string[] }) {
   return (
     <div style={{ position: "absolute", bottom: -72, left: -120, zIndex: 50 }}>
       {!expanded && (
-        <button
-          onClick={() => setExpanded(true)}
-          aria-label="Open product gallery"
-          style={{
-            width: 92,
-            height: 92,
-            borderRadius: 14,
-            border: "2px solid rgba(255,255,255,0.6)",
-            background: "#f2f2f2",
-            overflow: "hidden",
-            cursor: "pointer",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-          }}
-        >
-          <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#fff", borderRadius: 12 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              key={animKey}
-              src={images[currentIdx]}
-              alt=""
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                padding: 8,
-                animation: sliding === "in"
-                  ? slideDir === "next"
-                    ? "cahImgSlideInFromRight 0.42s ease forwards"
-                    : "cahImgSlideInFromLeft 0.42s ease forwards"
-                  : sliding === "out"
-                    ? slideDir === "next"
-                      ? "cahImgSlideOutToLeft 0.24s ease forwards"
-                      : "cahImgSlideOutToRight 0.24s ease forwards"
-                    : "none",
-              }}
-            />
-          </div>
-        </button>
+        <CollapsedViewer
+          animKey={animKey}
+          currentIdx={currentIdx}
+          images={images}
+          slideDir={slideDir}
+          sliding={sliding}
+          onOpen={() => setExpanded(true)}
+        />
       )}
 
       {(expanded || isClosing) && (
-        <div style={{
-          width: "clamp(320px,42vw,520px)",
-          background: "#fff",
-          color: "#000",
-          borderRadius: 24,
-          border: "2px solid #000",
-          zIndex: 50,
-          overflow: "hidden",
-          boxShadow: "0 18px 44px rgba(0,0,0,0.55)",
-          transformOrigin: "left bottom",
-          animation: isClosing
-            ? "cahPanelScaleOut 0.32s cubic-bezier(0.4, 0, 1, 1) forwards"
-            : "cahPanelScaleIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-            <button onClick={closeExpanded}
-              className="cah-panel-control"
-              style={{ display: "flex", alignItems: "center", gap: 6,
-                borderRadius: 9999, padding: "6px 14px",
-                fontWeight: 950, fontSize: "1rem", cursor: "pointer" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75">
-                <path d="M18 6L6 18M6 18H14M6 18V10"/>
-              </svg>
-              HIDE
-            </button>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["prev","next"] as const).map(dir => (
-                <button key={dir} onClick={() => navigate(dir)}
-                  aria-label={dir === "prev" ? "Previous image" : "Next image"}
-                  className="cah-panel-control"
-                  disabled={images.length < 2}
-                  style={{ width: 42, height: 42, borderRadius: "50%",
-                    cursor: images.length < 2 ? "not-allowed" : "pointer", display: "flex",
-                    alignItems: "center", justifyContent: "center", fontWeight: 950, fontSize: "1.05rem", lineHeight: 1 }}>
-                  <span>{dir === "prev" ? "<-" : "->"}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ height: "clamp(280px,35vw,420px)", display: "flex", alignItems: "center",
-            justifyContent: "center", background: "#fff", padding: 24, overflow: "hidden" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img key={animKey} src={images[currentIdx]} alt=""
-              style={{
-                maxHeight: "100%", maxWidth: "100%", objectFit: "contain",
-                animation: sliding === "in"
-                  ? slideDir === "next"
-                    ? "cahImgSlideInFromRight 0.35s ease forwards"
-                    : "cahImgSlideInFromLeft 0.35s ease forwards"
-                  : sliding === "out"
-                    ? slideDir === "next"
-                      ? "cahImgSlideOutToLeft 0.22s ease forwards"
-                      : "cahImgSlideOutToRight 0.22s ease forwards"
-                    : "none",
-              }} />
-          </div>
-
-        </div>
+        <ExpandedViewer
+          animKey={animKey}
+          currentIdx={currentIdx}
+          images={images}
+          isClosing={isClosing}
+          slideDir={slideDir}
+          sliding={sliding}
+          onNavigate={navigate}
+          onClose={closeExpanded}
+        />
       )}
     </div>
   );
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   RELATED PRODUCT CARD
-   — Specific CAH stickers fly out on hover
-   — Stickers follow mouse movement direction (parallax offset)
+   RELATED PRODUCT CARD HELPERS
 ════════════════════════════════════════════════════════════════════════ */
-// Sticker positions relative to card (as % offsets)
 const STICKER_SLOTS = [
   { top: "-3%", left: "41%", rotation: -8, scale: 1.02, xDir: 0, yDir: -1 },
   { top: "41%", left: "-14%", rotation: -14, scale: 1.0, xDir: -1, yDir: 0 },
@@ -365,9 +426,165 @@ const STICKER_SLOTS = [
   { top: "85%", right: "9%", rotation: 10, scale: 0.96, xDir: 1, yDir: 1 },
 ];
 
+function StickerLayer({ hovered, mouseOff, stickerSrc }: { hovered: boolean; mouseOff: { x: number; y: number }; stickerSrc: string }) {
+  return (
+    <>
+      {STICKER_SLOTS.map((slot, i) => {
+        const parallaxStrength = 16;
+        const px = hovered ? mouseOff.x * parallaxStrength : 0;
+        const py = hovered ? mouseOff.y * parallaxStrength : 0;
+
+        return (
+          <div key={i} style={{
+            position: "absolute",
+            top: slot.top,
+            left: "left" in slot ? slot.left : undefined,
+            right: "right" in slot ? slot.right : undefined,
+            width: "clamp(58px,6.1vw,92px)",
+            zIndex: 120,
+            pointerEvents: "none",
+            opacity: hovered ? 1 : 0,
+            transform: hovered
+              ? `translate(${px}px, ${py}px) rotate(${slot.rotation}deg) scale(${slot.scale})`
+              : `translate(0px, 0px) rotate(${slot.rotation}deg) scale(0.62)`,
+            transition: "opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)",
+          }}>
+            <Image
+              src={stickerSrc}
+              alt=""
+              width={92}
+              height={92}
+              loading="lazy"
+              sizes="92px"
+              style={{
+                width: "100%",
+                height: "auto",
+                display: "block",
+                filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.55))",
+              }}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function RelatedProductCTA({
+  price,
+  variantId,
+  adding,
+  added,
+  ctaHover,
+  onAdd,
+  onHover,
+}: {
+  price: string | null;
+  variantId: string;
+  adding: boolean;
+  added: boolean;
+  ctaHover: boolean;
+  onAdd: (e: MouseEvent) => void;
+  onHover: (state: boolean) => void;
+}) {
+  if (!price || !variantId) {
+    return (
+      <button disabled style={{
+        width: "100%", fontWeight: 700, borderRadius: 9999,
+        padding: "18px 28px", fontSize: "1.4rem",
+        background: "transparent", color: "#fff",
+        border: "2px solid rgba(255,255,255,0.25)", cursor: "not-allowed",
+      }}>
+        Unavailable In Your Region
+      </button>
+    );
+  }
+
+  return (
+    <button onClick={onAdd} disabled={adding}
+      onMouseEnter={() => onHover(true)}
+      onMouseLeave={() => onHover(false)}
+      style={{
+      width: "100%", fontWeight: 900, borderRadius: 9999, border: ctaHover ? "2px solid #000" : "2px solid #fff",
+      cursor: adding ? "not-allowed" : "pointer",
+      padding: "18px 28px", fontSize: "1.4rem",
+      background: added ? "#22c55e" : ctaHover ? "#fff" : "#000",
+      color: added ? "#fff" : ctaHover ? "#000" : "#fff",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      transition: "background 0.2s, color 0.2s, border-color 0.2s",
+    }}>
+      <span style={{ fontWeight: 700, fontSize: "1.65rem", letterSpacing: "0.02em", lineHeight: 1 }}>
+        {adding ? "Adding…" : added ? "✓ Added!" : "Add to Cart"}
+      </span>
+      <span style={{ fontWeight: 700, fontSize: "1.65rem", letterSpacing: "0.02em", lineHeight: 1 }}>
+        {price}
+      </span>
+    </button>
+  );
+}
+
+function RelatedProductImageArea({
+  hovered,
+  mainImg,
+  productTitle,
+  onMouseMove,
+  onMouseEnter,
+  onMouseLeave,
+  imageAreaRef,
+  stickerSrc,
+  mouseOff,
+}: {
+  hovered: boolean;
+  mainImg: string;
+  productTitle: string;
+  onMouseMove: (e: MouseEvent<HTMLDivElement>) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  imageAreaRef: RefObject<HTMLDivElement>;
+  stickerSrc: string;
+  mouseOff: { x: number; y: number };
+}) {
+  return (
+    <div
+      ref={imageAreaRef}
+      style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "16px 28px", minHeight: 240, overflow: "visible", position: "relative" }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onMouseMove={onMouseMove}
+    >
+      <StickerLayer hovered={hovered} mouseOff={mouseOff} stickerSrc={stickerSrc} />
+
+      {mainImg ? (
+        <Image src={mainImg} alt={productTitle}
+          width={360}
+          height={300}
+          loading="lazy"
+          sizes="(max-width: 1024px) 70vw, 360px"
+          style={{
+            maxHeight: 240, maxWidth: "100%", objectFit: "contain",
+            filter: "drop-shadow(0 12px 32px rgba(0,0,0,0.85))",
+            transform: hovered ? "scale(1.1) rotate(-3deg)" : "scale(1) rotate(0deg)",
+            transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
+            transformOrigin: "center bottom", position: "relative", zIndex: 180,
+          }} />
+      ) : (
+        <div style={{ width: 140, height: 200, background: "#111", borderRadius: 8,
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 900, fontSize: "0.85rem",
+            textAlign: "center", padding: "0 12px" }}>{productTitle}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   RELATED PRODUCT CARD
+════════════════════════════════════════════════════════════════════════ */
 function RelatedProductCard({
   product,
-  stickerIdx,   // which sticker image to use (0,1,2) — cycles per card
+  stickerIdx,
   onCartUpdate,
   onCartOpen,
 }: {
@@ -381,7 +598,6 @@ function RelatedProductCard({
   const [added,   setAdded]   = useState(false);
   const [ctaHover, setCtaHover] = useState(false);
 
-  // Mouse position relative to card center — for parallax
   const [mouseOff, setMouseOff] = useState({ x: 0, y: 0 });
   const imageAreaRef = useRef<HTMLDivElement>(null);
 
@@ -392,7 +608,7 @@ function RelatedProductCard({
   const href      = product.slug  ? `/products/${product.slug}` : "#";
   const variantId = product.variantId || "";
 
-  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  function onMouseMove(e: MouseEvent<HTMLDivElement>) {
     if (!imageAreaRef.current) return;
     const rect = imageAreaRef.current.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;
@@ -400,7 +616,7 @@ function RelatedProductCard({
     setMouseOff({ x: nx, y: ny });
   }
 
-  async function handleAdd(e: React.MouseEvent) {
+  async function handleAdd(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     if (!variantId) return;
@@ -426,13 +642,8 @@ function RelatedProductCard({
     finally { setAdding(false); }
   }
 
-  // We show 3 copies of the same sticker image in different positions
-  // (matching the screenshots where the same sticker type repeats around the card)
-  const stickerSlots = STICKER_SLOTS;
-
   return (
     <div style={{ position: "relative", zIndex: hovered ? 40 : 1 }}>
-      {/* ── Card body ── */}
       <a href={href} style={{
         display: "flex", flexDirection: "column",
         background: "#0a0a0a",
@@ -441,12 +652,10 @@ function RelatedProductCard({
         textDecoration: "none", minHeight: 640,
         cursor: "pointer", position: "relative", width: "100%", maxWidth: 415, zIndex: 10,
       }}>
-        {/* Oscillating badge */}
         <div style={{ position: "absolute", top: -14, right: -14, zIndex: 20 }}>
           <StarburstBadge text="New!" size={72} />
         </div>
 
-        {/* Title + description */}
         <div style={{ padding: "28px 28px 0" }}>
           <h3 style={{ color: "#fff", fontWeight: 900,
             fontSize: "clamp(2rem,2.2vw,2.45rem)", lineHeight: 1.07,
@@ -458,100 +667,28 @@ function RelatedProductCard({
           </p>
         </div>
 
-        {/* Main image — scales + tilts on hover */}
-        <div
-          ref={imageAreaRef}
-          style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "16px 28px", minHeight: 240, overflow: "visible", position: "relative" }}
+        <RelatedProductImageArea
+          hovered={hovered}
+          mainImg={mainImg}
+          productTitle={product.title}
+          onMouseMove={onMouseMove}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => { setHovered(false); setMouseOff({ x: 0, y: 0 }); }}
-          onMouseMove={onMouseMove}
-        >
-          {stickerSlots.map((slot, i) => {
-            const parallaxStrength = 16;
-            const px = hovered ? mouseOff.x * parallaxStrength : 0;
-            const py = hovered ? mouseOff.y * parallaxStrength : 0;
+          imageAreaRef={imageAreaRef}
+          stickerSrc={stickerSrc}
+          mouseOff={mouseOff}
+        />
 
-            return (
-              <div key={i} style={{
-                position: "absolute",
-                top: slot.top,
-                left: "left" in slot ? slot.left : undefined,
-                right: "right" in slot ? slot.right : undefined,
-                width: "clamp(58px,6.1vw,92px)",
-                zIndex: 120,
-                pointerEvents: "none",
-                opacity: hovered ? 1 : 0,
-                transform: hovered
-                  ? `translate(${px}px, ${py}px) rotate(${slot.rotation}deg) scale(${slot.scale})`
-                  : `translate(0px, 0px) rotate(${slot.rotation}deg) scale(0.62)`,
-                transition: "opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)",
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={stickerSrc}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                    display: "block",
-                    filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.55))",
-                  }}
-                />
-              </div>
-            );
-          })}
-
-          {mainImg ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={mainImg} alt={product.title} style={{
-              maxHeight: 240, maxWidth: "100%", objectFit: "contain",
-              filter: "drop-shadow(0 12px 32px rgba(0,0,0,0.85))",
-              transform: hovered ? "scale(1.1) rotate(-3deg)" : "scale(1) rotate(0deg)",
-              transition: "transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",
-              transformOrigin: "center bottom", position: "relative", zIndex: 180,
-            }} />
-          ) : (
-            <div style={{ width: 140, height: 200, background: "#111", borderRadius: 8,
-              display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 900, fontSize: "0.85rem",
-                textAlign: "center", padding: "0 12px" }}>{product.title}</span>
-            </div>
-          )}
-        </div>
-
-        {/* CTA */}
         <div style={{ padding: "0 20px 20px" }}>
-          {price && variantId ? (
-            <button onClick={handleAdd} disabled={adding}
-              onMouseEnter={() => setCtaHover(true)}
-              onMouseLeave={() => setCtaHover(false)}
-              style={{
-              width: "100%", fontWeight: 900, borderRadius: 9999, border: ctaHover ? "2px solid #000" : "2px solid #fff",
-              cursor: adding ? "not-allowed" : "pointer",
-              padding: "18px 28px", fontSize: "1.4rem",
-              background: added ? "#22c55e" : ctaHover ? "#fff" : "#000",
-              color: added ? "#fff" : ctaHover ? "#000" : "#fff",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              transition: "background 0.2s, color 0.2s, border-color 0.2s",
-            }}>
-              <span style={{ fontWeight: 700, fontSize: "1.65rem", letterSpacing: "0.02em", lineHeight: 1 }}>
-                {adding ? "Adding…" : added ? "✓ Added!" : "Add to Cart"}
-              </span>
-              <span style={{ fontWeight: 700, fontSize: "1.65rem", letterSpacing: "0.02em", lineHeight: 1 }}>
-                {price}
-              </span>
-            </button>
-          ) : (
-            <button disabled style={{
-              width: "100%", fontWeight: 700, borderRadius: 9999,
-              padding: "18px 28px", fontSize: "1.4rem",
-              background: "transparent", color: "#fff",
-              border: "2px solid rgba(255,255,255,0.25)", cursor: "not-allowed",
-            }}>
-              Unavailable In Your Region
-            </button>
-          )}
+          <RelatedProductCTA
+            price={price}
+            variantId={variantId}
+            adding={adding}
+            added={added}
+            ctaHover={ctaHover}
+            onAdd={handleAdd}
+            onHover={setCtaHover}
+          />
         </div>
       </a>
     </div>
@@ -587,14 +724,13 @@ function RelatedProducts({
         fontSize: "clamp(1.8rem,3.5vw,2.6rem)", letterSpacing: "-0.02em", marginBottom: 40 }}>
         You should check out:
       </h2>
-      {/* overflow:visible so stickers can fly outside card bounds */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 415px))", gap: 25,
         overflow: "visible", justifyContent: "center", justifyItems: "center" }}>
         {products.map((p: any, i: number) => (
           <RelatedProductCard
             key={p.id ?? i}
             product={p}
-            stickerIdx={i}        // card 0 → sticker[0], card 1 → sticker[1], card 2 → sticker[2]
+            stickerIdx={i}
             onCartUpdate={onCartUpdate}
             onCartOpen={onCartOpen}
           />
@@ -748,10 +884,16 @@ function ProductPageContent() {
           <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 420 }}>
               {mainImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mainImage} alt={product.title}
+                <Image
+                  src={mainImage}
+                  alt={product.title}
+                  width={900}
+                  height={900}
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                   style={{ maxHeight: 500, maxWidth: "100%", objectFit: "contain",
-                    filter: "drop-shadow(0 20px 60px rgba(0,0,0,0.8))" }} />
+                    filter: "drop-shadow(0 20px 60px rgba(0,0,0,0.8))" }}
+                />
               ) : (
                 <div style={{ width: 280, height: 380, background: "#111", borderRadius: 12,
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -814,7 +956,9 @@ function ProductPageContent() {
         </div>
       </div>
 
-      <RelatedProducts excludeSlug={slug} onCartUpdate={updateCart} onCartOpen={() => setCartOpen(true)} />
+      <Suspense fallback={<div style={{ color: "#fff", padding: "48px 40px" }}>Loading related products…</div>}>
+        <RelatedProducts excludeSlug={slug} onCartUpdate={updateCart} onCartOpen={() => setCartOpen(true)} />
+      </Suspense>
       <Footer />
     </div>
   );
