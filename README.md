@@ -1,314 +1,243 @@
-# Cards Against Humanity — Clone
+# Cards Against Humanity — Fullstack Headless Commerce Clone
 
-> Pixel-perfect clone of [cardsagainsthumanity.com](https://www.cardsagainsthumanity.com) built as a Weframetech Solutions internship assignment.
+Comprehensive, content-driven recreation of cardsagainsthumanity.com. The stack pairs a Next.js App Router storefront with Payload CMS for content and Medusa v2 for commerce, plus a two-way sync between CMS and Medusa so product data stays aligned.
 
 ---
 
-## Live Links
+## Screenshots
 
-| Service | URL |
-|---|---|
-| **Frontend** | `https://cardsagainsthumanity-frontend.vercel.app` |
-| **Payload CMS Admin** | `https://cardsagainsthumanity-cms.vercel.app/admin` |
-| **Medusa Backend** | `https://cardsagainsthumanity-nkt4.onrender.com` |
+- Homepage: ![homepage](image.png)
+- Product Cards: ![productpage](image-1.png)
+- CMS Dashboard: ![cms-dashboard](image-2.png)
+
+---
+
+## Features
+
+- Fully content-driven homepage powered by Payload CMS
+- Product synchronization between Payload CMS and Medusa
+- Custom motion/scroll interactions with GSAP and Keen Slider
+- Client-side cart and checkout via Medusa Store API
+- Webhook-based data synchronization (Medusa → Payload) plus CMS afterChange hook (Payload → Medusa)
+- Modular CMS collections for hero, buy cards, stuff posts, FAQs, pages, and media
+
+---
+
+## Why This Architecture
+
+This project demonstrates a headless commerce architecture where:
+
+- Payload CMS manages all marketing and merchandising content
+- Medusa handles commerce logic, products, variants, carts, and checkout
+- Next.js serves as the storefront, consuming CMS content and Medusa store APIs
+
+This separation lets content editors ship updates without touching commerce code while keeping product data synchronized across systems.
+
+---
+
+## Overview
+
+- **Frontend:** Next.js App Router, Tailwind CSS, custom animations, client-side cart using Medusa Store API.
+- **CMS:** Payload CMS (MongoDB) manages all marketing content, product metadata, media, and homepage layouts.
+- **Commerce:** Medusa v2 (PostgreSQL, optional Redis) handles products, variants, carts, and checkout state. Publishable key is used on the storefront; admin token is used by the CMS sync hook.
+- **Sync:** Payload `afterChange` hook pushes products to Medusa; Medusa webhooks + subscriber push changes back to Payload; frontend webhook keeps Payload up to date from Medusa events.
+
+---
+
+## Architecture Diagram (text)
+
+```
+                   +-----------------------+
+                   |    Payload CMS        |
+                   |  (MongoDB + Blob)     |
+                   +-----------------------+
+                     ↑   ↑            ↑
+   AfterChange hook   |   |            | REST (content)
+   (create/update)    |   |            |
+   to Medusa Admin    |   |            |
+                     |   |            |
+ +-------------------+---+------------+-------------------+
+ |                   |                |                   |
+ |  Medusa Backend   |  Webhook → FE  |   Frontend (Next) |
+ |  (PostgreSQL)     |                |   Tailwind/GSAP   |
+ +-------------------+----------------+-------------------+
+          ↑                  | REST (Medusa Store API)      
+          | Subscriber       | reads carts/products         
+          | (product.updated)|                             
+          +------------------+                             
+
+Legend: CMS → Medusa (afterChange); Medusa → CMS (subscriber + webhook handled in FE route); Frontend reads from CMS for content and Medusa for cart/checkout.
+```
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14 (App Router) + Tailwind CSS |
-| CMS | Payload CMS 3 (MongoDB Atlas) |
-| Commerce | Medusa.js v2 (PostgreSQL) |
-| Animations | GSAP (lazy-loaded) |
-| Deployment | Vercel (Frontend + CMS), Render (Medusa) |
+- Next.js (App Router) + Tailwind CSS
+- Payload CMS 3 (MongoDB + Vercel Blob storage)
+- Medusa v2 (PostgreSQL, optional Redis)
+- GSAP, Keen Slider
+- Deployed: Vercel (frontend + CMS), Render (Medusa)
+
+---
+
+## Prerequisites
+
+- Node.js 20.x (Medusa requires 20.x; Payload supports 18/20)
+- npm 10+ (package-lock present); pnpm 9/10 also supported in CMS
+- Datastores: PostgreSQL (Medusa), MongoDB (Payload), optional Redis
+- Vercel account (frontend, CMS) and Render account (Medusa) for deployments
 
 ---
 
 ## Project Structure
 
-```
-/
-├── frontend/                  # Next.js app
-│   ├── app/
-│   │   ├── page.tsx           # Homepage (Server Component)
-│   │   ├── products/
-│   │   │   └── more-cah/
-│   │   │       └── page.tsx   # Product page
-│   │   ├── auth/page.tsx      # Login/Register
-│   │   └── api/
-│   │       └── medusa-webhook/route.ts  # Medusa → CMS sync
-│   ├── components/
-│   │   ├── CartProvider.tsx   # Shared cart context
-│   │   ├── Navbar.tsx
-│   │   ├── HeroSection.tsx    # GSAP card animation (lazy loaded)
-│   │   ├── BuySection.tsx
-│   │   ├── EmailSection.tsx
-│   │   ├── FAQSection.tsx
-│   │   ├── CartDrawer.tsx
-│   │   └── CheckoutDrawer.tsx
-│   ├── hooks/
-│   │   └── useCart.ts         # Cart state + Medusa API calls
-│   └── next.config.ts
-│
-├── cms/                       # Payload CMS
-│   └── src/
-│       ├── collections/
-│       │   ├── Users.ts
-│       │   ├── Media.ts
-│       │   ├── Products.ts    # Product catalog
-│       │   ├── Pages.ts
-│       │   ├── FAQs.ts        # FAQ accordion items
-│       │   ├── StuffPosts.ts  # "Stuff we've done" cards
-│       │   ├── BuyCards.ts    # "Buy the game" scroll cards
-│       │   └── EmailPhrases.ts # Rotating email section phrases
-│       ├── globals/
-│       │   ├── HomePage.ts    # All homepage text content
-│       │   └── SiteSettings.ts
-│       └── payload.config.ts
-│
-└── medusa/                    # Medusa backend
-    ├── medusa-config.ts
-    └── .env
-```
+/cardsagainsthumanity
+ ├── frontend/   → Next.js storefront
+ ├── cms/        → Payload CMS
+ ├── medusa/     → Medusa backend
+ └── README.md
 
 ---
 
-## Local Setup
+## Setup (per service)
 
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL (for Medusa)
-- MongoDB Atlas account (for Payload CMS)
-
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/YOUR_USERNAME/cah-clone.git
-cd cah-clone
-```
-
-### 2. Frontend
-
+### Frontend (Next.js)
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local
-# Fill in .env.local (see below)
-npm run dev       # http://localhost:3000
+cp .env.example .env.local  # if you keep an example; otherwise create .env.local
+npm run dev                  # http://localhost:3000
 ```
 
-**`frontend/.env.local`**
-```env
-NEXT_PUBLIC_CMS_URL=http://localhost:3001
-NEXT_PUBLIC_MEDUSA_URL=http://localhost:9000
-NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_YOUR_KEY_HERE
-NEXT_PUBLIC_MEDUSA_VARIANT_ID=variant_YOUR_VARIANT_ID
-NEXT_PUBLIC_MEDUSA_REGION_ID=reg_YOUR_REGION_ID
-```
-
-### 3. Payload CMS
-
+### CMS (Payload)
 ```bash
 cd cms
 npm install
 cp .env.example .env
-# Fill in .env (see below)
-npm run dev       # http://localhost:3001
+# Fill env values (see Environment Variables)
+npm run dev                  # http://localhost:3001
 ```
 
-**`cms/.env`**
-```env
-PAYLOAD_SECRET=your_random_secret_string
-DATABASE_URL=mongodb+srv://user:pass@cluster.mongodb.net/cah-cms
-MEDUSA_URL=http://localhost:9000
-MEDUSA_ADMIN_TOKEN=your_medusa_admin_api_key
-```
-
-### 4. Medusa Backend
-
+### Medusa Backend
 ```bash
 cd medusa
 npm install
-cp .env.example .env
-# Fill in .env (see below)
-npx medusa db:create
-npx medusa db:migrate
-npx medusa seed                    # optional: seed demo data
-npm run dev       # http://localhost:9000
-```
-
-**`medusa/.env`**
-```env
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/medusa_db
-JWT_SECRET=your_jwt_secret
-COOKIE_SECRET=your_cookie_secret
-STORE_CORS=http://localhost:3000
-ADMIN_CORS=http://localhost:9000,http://localhost:3000
-AUTH_CORS=http://localhost:3000,http://localhost:9000
+cp .env.template .env
+# Fill env values (see Environment Variables)
+npx medusa db:migrate        # apply schema
+npm run dev                  # http://localhost:9000
 ```
 
 ---
 
-## CMS Structure
+## Environment Variables
 
-### Global: `home-page`
+### Frontend
+| Variable | Description |
+| --- | --- |
+| NEXT_PUBLIC_CMS_URL | Public URL of Payload API (e.g., http://localhost:3001). |
+| PAYLOAD_API_KEY | Payload user API key used by the Medusa webhook route to patch products. |
+| NEXT_PUBLIC_MEDUSA_URL | Medusa store API base (e.g., http://localhost:9000). |
+| NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY | Publishable key from Medusa Admin → Settings → API Keys. |
+| NEXT_PUBLIC_MEDUSA_REGION_ID | Region ID used when creating carts. |
 
-Controls all homepage text. Edit at `/admin/globals/home-page`.
+### CMS (Payload)
+| Variable | Description |
+| --- | --- |
+| DATABASE_URL | MongoDB connection string. |
+| PAYLOAD_SECRET | Auth/CSRF secret for Payload. |
+| BLOB_READ_WRITE_TOKEN | Vercel Blob token for media storage. |
+| NEXT_PUBLIC_FRONTEND_URL | Allowed origin for CORS/CSRF. |
+| NEXT_PUBLIC_CMS_URL | Public CMS URL (used in CORS + CSRF). |
+| CMS_PUBLIC_URL or PAYLOAD_PUBLIC_SERVER_URL | Absolute CMS base used to resolve media URLs. |
+| MEDUSA_URL | Medusa admin base (defaults to http://localhost:9000). |
+| MEDUSA_ADMIN_TOKEN | Medusa secret key used by the afterChange hook to create/update products. |
+| VERCEL_URL | (auto on Vercel) added to allowed origins. |
 
-| Field | Description |
-|---|---|
-| `hero.quotes` | Rotating press quotes (NPR, Bloomberg, etc.) |
-| `about.paragraph1/2` | About section text |
-| `buySection.heading` | "Buy the game." heading |
-| `stealSection.*` | Steal section — heading, body, download URL, badge text |
-| `stuffSection.*` | Stuff section — heading, badge text |
-| `emailSection.*` | Email section — prefix, suffix, disclaimer |
-| `faqSection.heading` | FAQ section heading |
-| `footer.*` | Copyright + all link columns |
-
-### Collections
-
-| Collection | Purpose | How to add more |
-|---|---|---|
-| **Products** | Product catalog (synced with Medusa) | Create New → fill title, slug, description, price, images |
-| **FAQs** | Homepage FAQ accordion | Create New → question + richText answer + order number |
-| **BuyCards** | "Buy the game" horizontal scroll | Create New → label, CTA, href, background color, product image |
-| **StuffPosts** | "Stuff we've done" cards | Create New → label, tag, description, image |
-| **EmailPhrases** | Rotating phrases in email section | Create New → phrase text + order number |
-| **Media** | All uploaded images | Auto-managed via upload fields |
-
-**All collections have:**
-- `order` field — lower number = appears first
-- `published` checkbox — uncheck to hide without deleting
-
----
-
-## Medusa Integration
-
-### Product Flow
-
-```
-Medusa Admin → Create Product → Set Variant price + stock
-                ↓ webhook
-Payload CMS ← POST /api/medusa-webhook (syncs title, price, variantId)
-                ↓
-Frontend → fetches from CMS /api/products → displays on product page
-```
-
-### Cart Flow
-
-```
-User clicks "Add to Cart"
-  → frontend calls POST /store/carts (create cart if none)
-  → POST /store/carts/:id/line-items (add item)
-  → Cart stored in localStorage
-
-User clicks "Checkout"
-  → POST /store/payment-collections { cart_id }
-  → POST /store/payment-collections/:id/payment-sessions { provider_id: "pp_system_default" }
-  → POST /store/carts/:id/complete
-  → Returns { type: "order", order: { display_id, status } }
-```
-
-### Medusa API Keys
-
-1. Go to `http://localhost:9000/app`
-2. Settings → API Keys → Create Publishable Key
-3. Copy to `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` in frontend `.env.local`
-4. Settings → API Keys → Create Secret Key  
-5. Copy to `MEDUSA_ADMIN_TOKEN` in cms `.env`
+### Medusa
+| Variable | Description |
+| --- | --- |
+| DATABASE_URL | Postgres connection string. |
+| USE_REDIS | `true` to enable Redis; otherwise modules run in memory. |
+| REDIS_URL | Redis connection string (required if USE_REDIS=true). |
+| STORE_CORS | Allowed origins for store API (e.g., http://localhost:3000). |
+| ADMIN_CORS | Allowed origins for admin API (e.g., http://localhost:9000). |
+| AUTH_CORS | Allowed origins for auth endpoints. |
+| JWT_SECRET | JWT secret for sessions. |
+| COOKIE_SECRET | Cookie signing secret. |
+| PORT | Port Medusa listens on (default 9000). |
+| DISABLE_ADMIN | `true` to disable admin UI. |
+| PAYLOAD_URL | Payload base URL for the Medusa subscriber. |
+| PAYLOAD_SECRET | Payload user API key for the subscriber sync. |
 
 ---
 
-## CMS ↔ Medusa Sync Mechanism
+## CMS Structure (Payload collections/globals)
 
-### Medusa → CMS (via Webhook)
-
-When a product is created/updated in Medusa admin, it fires a webhook to the frontend's `/api/medusa-webhook` route, which then calls the Payload CMS API to create or update the corresponding product document.
-
-**Register the webhook in Medusa:**
-1. Go to Medusa Admin → Settings → Webhooks
-2. Create webhook: `https://your-frontend.vercel.app/api/medusa-webhook`
-3. Events: `product.created`, `product.updated`
-
-**`app/api/medusa-webhook/route.ts`** receives the event and:
-- Checks if a CMS product with matching `medusaId` exists
-- If yes → updates it (title, price, variantId)
-- If no → creates a new CMS product
-
-### CMS → Medusa (Manual)
-
-When you update a product price or details in Payload CMS, the `afterChange` hook in `Products.ts` calls the Medusa admin API to keep inventory in sync.
+- **Globals**
+  - `home-page`: hero quotes, about copy, buy/steal/stuff/email/FAQ headings, footer link sets.
+  - `site-settings`: site title, footer text, nav/footer links.
+- **Collections**
+  - `products`: title, slug, description, price (cents), mainImage, galleryImages, Medusa IDs (`medusaId`, `variantId`); afterChange sync to Medusa.
+  - `faqs`: question, rich-text answer, order, published flag.
+  - `buy-cards`: homepage buy carousel cards, colors, CTA, floating images (upload + positioning), order/published.
+  - `stuff-posts`: “Stuff we’ve done” cards with tag, headline, illustration, CTA, colors, order/published.
+  - `email-phrases`: rotating email headline phrases with order/published.
+  - `pages`: generic pages with hero, sections, and slugs.
+  - `media`: upload collection with `alt` text.
+  - `users`: auth-enabled admin users (API key support).
 
 ---
 
-## Performance Optimizations (Lighthouse 95+)
+## Medusa Integration (storefront)
 
-| Technique | Implementation |
-|---|---|
-| **Server Components** | `page.tsx` is a server component — CMS data fetched server-side, zero client JS for static sections |
-| **Lazy GSAP** | `import("gsap")` only runs after page load — not in initial JS bundle |
-| **next/dynamic** | Hero, Navbar, BuySection, EmailSection, FAQSection all lazy-loaded |
-| **next/image** | All `<img>` tags replaced with `<Image>` — automatic WebP/AVIF, lazy loading, size hints |
-| **ISR** | CMS fetch uses `next: { revalidate: 60 }` — pages served from cache, rebuilt every 60s |
-| **Font preloading** | `Inter` via `next/font/google` with `display: "swap"` |
-| **compress: true** | `next.config.ts` enables gzip/brotli for all responses |
-| **Static sections** | AboutSection, StealSection, StuffSection, FooterSection are pure server components |
+- Storefront uses the Medusa **Store API** via `NEXT_PUBLIC_MEDUSA_URL` and publishable key.
+- Carts are created client-side (`POST /store/carts` with region) and persisted in `localStorage`.
+- Line items are added via `POST /store/carts/:id/line-items`; checkout flow uses payment collections, then `POST /store/carts/:id/complete`.
+- Product display data comes from Payload (rich content + images) while price/variant IDs are synced from Medusa for accurate checkout.
+
+---
+
+## CMS ↔ Medusa Sync
+
+- **CMS → Medusa:** Payload `products` collection has an `afterChange` hook that:
+  - Resolves `mainImage` to an absolute URL using `CMS_PUBLIC_URL`/`PAYLOAD_PUBLIC_SERVER_URL`.
+  - On create: calls Medusa Admin API to create a product + default variant (price in cents), sets thumbnail from main image, then writes back `medusaId` and `variantId` to the Payload doc.
+  - On update: updates Medusa product fields and variant price when `variantId` is present.
+
+- **Medusa → CMS:**
+  - **Medusa subscriber** (`medusa/src/subscribers/sync-to-payload.js`): listens to `product.updated` and patches the matching Payload product (by `medusaId`) using `PAYLOAD_URL` and `PAYLOAD_SECRET`.
+  - **Frontend webhook** (`frontend/app/api/medusa-webhook/route.ts`): handles `product.updated`/`product.created` webhooks, creates or updates the Payload product (title, description, price, variantId).
 
 ---
 
 ## Deployment
 
-### Frontend + CMS → Vercel
+- **Frontend (Next.js) — Vercel:** push `frontend/`, set env vars, `vercel --prod` or Git integration.
+- **CMS (Payload) — Vercel:** push `cms/`, set env vars (including Blob token), `vercel --prod`.
+- **Medusa — Render:** create Web Service from `medusa/`; build `npm install && npx medusa db:migrate`; start `npm start`; attach PostgreSQL and set env vars.
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy frontend
-cd frontend && vercel --prod
-
-# Deploy CMS
-cd cms && vercel --prod
-```
-
-Set all environment variables in Vercel Dashboard → Project → Settings → Environment Variables.
-
-### Medusa → Render
-
-1. Push `medusa/` to a GitHub repo
-2. Create a new **Web Service** on Render
-3. Build command: `npm install && npx medusa db:migrate`
-4. Start command: `npm start`
-5. Add all env variables from `medusa/.env`
-6. Add a **PostgreSQL** database on Render and copy the connection string to `DATABASE_URL`
 
 ---
 
-## Scripts
+## Live URLs
 
-```bash
-# Frontend
-npm run dev         # development server
-npm run build       # production build
-npm run start       # production server
-ANALYZE=true npm run build  # bundle analysis
+| Service | URL |
+| --- | --- |
+| Frontend | https://cardsagainsthumanity-frontend.vercel.app |
+| Payload CMS | https://cardsagainsthumanity-cms.vercel.app |
+| Medusa API | https://cardsagainsthumanity-7vct.onrender.com |
 
-# CMS
-npm run dev         # development server
-npm run build       # production build
+Replace placeholders with deployed URLs.
 
-# Medusa
-npm run dev         # development server
-npx medusa db:migrate   # run migrations
-```
 
 ---
 
-## Credits
+## License
 
-Built as an internship assignment for **Weframetech Solutions**.  
-Original game by [Cards Against Humanity LLC](https://www.cardsagainsthumanity.com).
+MIT License. You are free to use, modify, and distribute under the terms of the MIT license.
+
+---
+
+Happy building!
