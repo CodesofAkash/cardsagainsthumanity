@@ -409,7 +409,13 @@ function RelatedProductCard({
       const cartId = await getOrCreateCart();
       await fetch(`${MEDUSA_URL}/store/carts/${cartId}/line-items`, {
         method: "POST", headers: medusaHeaders,
-        body: JSON.stringify({ variant_id: variantId, quantity: 1 }),
+        body: JSON.stringify({
+          variant_id: variantId,
+          quantity: 1,
+          metadata: {
+            image: mainImg || "",
+          },
+        }),
       });
       const data = await fetchCartById(cartId);
       onCartUpdate(data);
@@ -684,11 +690,18 @@ function ProductPageContent() {
   async function handleAddToCart() {
     if (!variantId) return;
     setAdding(true);
+    const { mainImage } = resolveProductMedia(product);
     try {
       const cartId = await getOrCreateCart();
       await fetch(`${MEDUSA_URL}/store/carts/${cartId}/line-items`, {
         method: "POST", headers: medusaHeaders,
-        body: JSON.stringify({ variant_id: variantId, quantity: 1 }),
+        body: JSON.stringify({
+          variant_id: variantId,
+          quantity: 1,
+          metadata: {
+            image: mainImage || "",
+          },
+        }),
       });
       const data = await fetchCartById(cartId);
       updateCart(data);

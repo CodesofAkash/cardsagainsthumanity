@@ -88,12 +88,14 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         {/* Items */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div>
-            {items.map((item: any) => (
+            {items.map((item: any) => {
+              const imageSrc = item?.metadata?.image || item?.thumbnail;
+              return (
                 <div key={item.id} className="flex gap-5 py-6 items-center border-b-[3px] border-gray-400">
                   <div className="relative w-20 h-20 bg-white shrink-0 overflow-visible">
-                    {item.thumbnail && (
+                    {imageSrc && (
                       <img
-                        src={item.thumbnail}
+                        src={imageSrc}
                         alt={item.title}
                         className="relative z-20 w-full h-full object-contain transition-transform duration-300 ease-out hover:scale-110 hover:-rotate-6"
                       />
@@ -124,7 +126,8 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
                     <p className="font-medium text-[1.35rem] leading-none text-black">${((item.unit_price || 0) / 100).toFixed(2)}</p>
                   </div>
                 </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

@@ -1,5 +1,33 @@
 import { CollectionConfig } from 'payload'
 
+function toAbsoluteUrl(url: string, baseUrl: string): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  const normalizedBase = baseUrl.replace(/\/$/, '')
+  return `${normalizedBase}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+async function resolveMainImageUrl(doc: any, payload: any, cmsPublicUrl: string): Promise<string> {
+  const mainImage = doc?.mainImage
+
+  if (!mainImage) return ''
+
+  if (typeof mainImage === 'object' && typeof mainImage.url === 'string' && mainImage.url) {
+    return toAbsoluteUrl(mainImage.url, cmsPublicUrl)
+  }
+
+  if (typeof mainImage === 'string') {
+    try {
+      const media = await payload.findByID({ collection: 'media', id: mainImage })
+      if (media?.url) return toAbsoluteUrl(media.url, cmsPublicUrl)
+    } catch (error) {
+      console.warn('[CMS→Medusa] Unable to resolve mainImage media URL:', error)
+    }
+  }
+
+  return ''
+}
+
 const Products: CollectionConfig = {
   slug: 'products',
   access: {
@@ -76,6 +104,10 @@ const Products: CollectionConfig = {
       async ({ doc, operation }) => {
         const MEDUSA_URL = process.env.MEDUSA_URL || 'http://localhost:9000'
         const MEDUSA_ADMIN_TOKEN = process.env.MEDUSA_ADMIN_TOKEN || ''
+        const CMS_PUBLIC_URL =
+          process.env.CMS_PUBLIC_URL ||
+          process.env.PAYLOAD_PUBLIC_SERVER_URL ||
+          'http://localhost:3001'
 
         if (!MEDUSA_ADMIN_TOKEN) {
           console.warn('[CMS→Medusa] MEDUSA_ADMIN_TOKEN not set, skipping sync')
@@ -87,6 +119,10 @@ const Products: CollectionConfig = {
           Authorization: `Bearer ${MEDUSA_ADMIN_TOKEN}`,
         }
 
+        const { getPayload } = await import('payload')
+        const payload = await getPayload({ config: (await import('../payload.config')).default })
+        const thumbnail = await resolveMainImageUrl(doc, payload, CMS_PUBLIC_URL)
+
         try {
           if (operation === 'create') {
             // 1. Create product in Medusa
@@ -96,6 +132,7 @@ const Products: CollectionConfig = {
               body: JSON.stringify({
                 title: doc.title,
                 description: doc.description || '',
+                ...(thumbnail ? { thumbnail } : {}),
                 status: 'published',
                 variants: [
                   {
@@ -115,8 +152,6 @@ const Products: CollectionConfig = {
             if (medusaProductId) {
               // 2. Write Medusa IDs back to Payload
               // Note: direct DB update to avoid infinite hook loop
-              const { getPayload } = await import('payload')
-              const payload = await getPayload({ config: (await import('../payload.config')).default })
               await payload.update({
                 collection: 'products',
                 id: doc.id,
@@ -132,6 +167,7 @@ const Products: CollectionConfig = {
               body: JSON.stringify({
                 title: doc.title,
                 description: doc.description || '',
+                ...(thumbnail ? { thumbnail } : {}),
               }),
             })
 
