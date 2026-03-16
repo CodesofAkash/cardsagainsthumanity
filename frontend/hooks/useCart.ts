@@ -35,13 +35,23 @@ export function useCart() {
   const [cartData, setCartData] = useState<any>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [cartLoading, setCartLoading] = useState(true);
 
   const loadCart = useCallback(async () => {
+    setCartLoading(true);
     const cartId = localStorage.getItem("cart_id");
     if (cartId) {
-      const data = await fetchCartById(cartId);
-      setCartData(data);
+      try {
+        const data = await fetchCartById(cartId);
+        setCartData(data);
+      } catch (err) {
+        console.error("[useCart] loadCart error", err);
+        setCartData(null);
+      }
+    } else {
+      setCartData(null);
     }
+    setCartLoading(false);
   }, []);
 
   useEffect(() => {
@@ -74,6 +84,7 @@ export function useCart() {
     cartCount,
     cartOpen,
     checkoutOpen,
+    cartLoading,
     setCartOpen,
     setCheckoutOpen,
     updateCart,

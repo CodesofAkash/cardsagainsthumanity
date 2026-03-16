@@ -14,6 +14,7 @@ import CartProvider, { useCartCtx } from "@/components/CartProvider";
 import CartDrawer from "@/components/CartDrawer";
 import CheckoutDrawer from "@/components/CheckoutDrawer";
 import Navbar from "@/components/Navbar";
+import { HeroSkeleton, ProductCardSkeleton } from "@/components/Skeletons";
 
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
 
@@ -896,8 +897,8 @@ function ProductPageContent() {
   const [adding,  setAdding]  = useState(false);
   const [added,   setAdded]   = useState(false);
 
-  const { cartData, cartOpen, checkoutOpen,
-          setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCartCtx();
+    const { cartData, cartOpen, checkoutOpen, cartLoading,
+      setCartOpen, setCheckoutOpen, updateCart, clearCart } = useCartCtx();
 
   useEffect(() => {
     setLoading(true);
@@ -937,11 +938,23 @@ function ProductPageContent() {
   const { mainImage, galleryImages } = resolveProductMedia(product);
   const priceDisplay = product?.price ? `€${(product.price / 100).toFixed(2)}` : "€29";
 
-  if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black text-xl animate-pulse">Loading…</div>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white" style={{ paddingTop: 72 }}>
+        <HeroSkeleton />
+        <section className="related-products" style={{ background: "#000" }}>
+          <div className="mx-auto max-w-6xl px-6 py-10">
+            <div className="mb-6 h-8 w-48 rounded bg-white/10 animate-pulse" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (!product) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
@@ -955,7 +968,8 @@ function ProductPageContent() {
       <Navbar cmsHome={null} alwaysVisible />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)}
         cartData={cartData} onCartUpdate={updateCart}
-        onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} />
+        onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }}
+        loading={cartLoading} />
       <CheckoutDrawer open={checkoutOpen} onClose={() => setCheckoutOpen(false)}
         cartData={cartData} onOrderComplete={clearCart} />
 
@@ -1039,7 +1053,20 @@ function ProductPageContent() {
         </div>
       </div>
 
-      <Suspense fallback={<div style={{ color: "#fff", padding: "48px 40px" }}>Loading related products…</div>}>
+      <Suspense
+        fallback={(
+          <section className="related-products" style={{ background: "#000" }}>
+            <div className="mx-auto max-w-6xl px-6 py-10">
+              <div className="mb-6 h-8 w-48 rounded bg-white/10 animate-pulse" />
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+      >
         <RelatedProducts excludeSlug={slug} onCartUpdate={updateCart} onCartOpen={() => setCartOpen(true)} />
       </Suspense>
       <Footer />
