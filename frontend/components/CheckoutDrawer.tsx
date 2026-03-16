@@ -40,6 +40,33 @@ function formatCartPrice(amountCents: number, currencyCode: string): string {
   }
 }
 
+function extractOrderReference(raw: unknown): string | null {
+  const queue: unknown[] = [raw];
+
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (!node || typeof node !== "object") continue;
+    const obj = node as Record<string, unknown>;
+
+    const displayId = obj.display_id;
+    if (typeof displayId === "string" || typeof displayId === "number") return String(displayId);
+
+    const id = obj.id;
+    if (typeof id === "string" || typeof id === "number") return String(id);
+
+    if (obj.type === "order") {
+      if (obj.order) queue.unshift(obj.order);
+      if (obj.data) queue.unshift(obj.data);
+    }
+
+    if (obj.order) queue.push(obj.order);
+    if (obj.data) queue.push(obj.data);
+    if (obj.cart) queue.push(obj.cart);
+  }
+
+  return null;
+}
+
 function validateStep(step: StepName, data: any): string | null {
   if (step === "address") {
     if (!data.addr.full_name.trim()) return "Please enter your full name.";
@@ -90,20 +117,31 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   const [contact, setContact] = useState({ email:"", phone:"" });
   const [isGift, setIsGift] = useState(false);
   const [hasSavingsCode, setHasSavingsCode] = useState(false);
+  const [contactOptIn, setContactOptIn] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<any[]>([]);
   const [selectedShipping, setSelectedShipping] = useState("");
   const [card, setCard] = useState({ number:"", expiry:"", cvc:"", postal:"" });
   const [submitting, setSubmitting] = useState(false);
-  const [orderId, setOrderId] = useState("");
   const [error, setError] = useState("");
   const [recipientHover, setRecipientHover] = useState(false);
+  const [contactHover, setContactHover] = useState(false);
+  const [shippingHover, setShippingHover] = useState(false);
   const recipientPencilRef = useRef<HTMLSpanElement>(null);
+  const contactPencilRef = useRef<HTMLSpanElement>(null);
+  const shippingPencilRef = useRef<HTMLSpanElement>(null);
 
   const cartId   = cartData?.cart?.id;
   const subtotal = cartData?.cart?.subtotal || 0;
   const currencyCode = ((cartData?.cart?.currency_code as string | undefined) || "usd").toUpperCase();
   const subtotalLabel = formatCartPrice(subtotal, currencyCode);
   const cc = (c: string) => COUNTRY_CODES[c] || c.slice(0,2).toLowerCase();
+  const activeShippingOption = shippingOptions.find((opt: any) => opt.id === selectedShipping) || shippingOptions[0];
+  const showShippingSummary = step === "payment";
+  const shippingAmount = activeShippingOption?.amount || 0;
+  const chargeLabel = formatCartPrice(subtotal + shippingAmount, currencyCode);
+  const shippingName = activeShippingOption?.name || "—";
+  const shippingPrice = activeShippingOption ? `$${((activeShippingOption.amount || 0) / 100).toFixed(2)}` : "—";
   const recipientAddressLines = [
     addr.street,
     addr.unit,
@@ -140,7 +178,8 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   // ── Drawer GSAP ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (open) {
-      setStep("country"); setOrderId(""); setError("");
+      setStep("country"); setError("");
+      setTermsAccepted(false);
     }
   }, [open]);
 
@@ -151,6 +190,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
     gsap.killTweensOf(el);
     if (recipientHover) {
       gsap.to(el, {
+        x: 0,
         y: 0,
         opacity: 1,
         duration: 0.26,
@@ -158,6 +198,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
       });
     } else {
       gsap.to(el, {
+        x: 8,
         y: 14,
         opacity: 0,
         duration: 0.16,
@@ -165,6 +206,54 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
       });
     }
   }, [recipientHover]);
+
+  useEffect(() => {
+    const el = contactPencilRef.current;
+    if (!el) return;
+
+    gsap.killTweensOf(el);
+    if (contactHover) {
+      gsap.to(el, {
+        x: 0,
+        y: 0,
+        opacity: 1,
+        duration: 0.26,
+        ease: "back.out(1.7)",
+      });
+    } else {
+      gsap.to(el, {
+        x: 8,
+        y: 14,
+        opacity: 0,
+        duration: 0.16,
+        ease: "power2.in",
+      });
+    }
+  }, [contactHover]);
+
+  useEffect(() => {
+    const el = shippingPencilRef.current;
+    if (!el) return;
+
+    gsap.killTweensOf(el);
+    if (shippingHover) {
+      gsap.to(el, {
+        x: 0,
+        y: 0,
+        opacity: 1,
+        duration: 0.26,
+        ease: "back.out(1.7)",
+      });
+    } else {
+      gsap.to(el, {
+        x: 8,
+        y: 14,
+        opacity: 0,
+        duration: 0.16,
+        ease: "power2.in",
+      });
+    }
+  }, [shippingHover]);
 
   // ── Step GSAP transition ──────────────────────────────────────────────────
   function goTo(next: StepName, dir: "forward"|"back" = "forward") {
@@ -267,6 +356,14 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   function goBack() {
     const idx = STEP_ORDER.indexOf(step);
     if (idx > 0) goTo(STEP_ORDER[idx-1], "back");
+  }
+
+  function jumpToStep(target: StepName) {
+    if (target === step) return;
+    const currentIdx = STEP_ORDER.indexOf(step);
+    const targetIdx = STEP_ORDER.indexOf(target);
+    if (targetIdx === -1 || currentIdx === -1) return;
+    goTo(target, targetIdx < currentIdx ? "back" : "forward");
   }
 
   // ── Step handlers ─────────────────────────────────────────────────────────
@@ -382,6 +479,10 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
   async function submitOrder() {
     const err = validateStep("payment", { addr, contact, card });
     if (err) { setError(err); return; }
+    if (!termsAccepted) {
+      setError("Please accept the Terms of Use and Privacy Policy to continue.");
+      return;
+    }
     if (!cartId) { setError("No cart found. Please add items and try again."); return; }
 
     setSubmitting(true);
@@ -397,30 +498,19 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
       });
       const raw = await res.json();
       console.log("[Checkout] /complete response:", JSON.stringify(raw, null, 2));
+      const orderRef = extractOrderReference(raw);
 
       // 409 Conflict = cart was already used in a previous /complete attempt (idempotency key clash)
       // The only fix is to clear the stale cart so a fresh one is created next time
       if (res.status === 409 || raw?.type === "conflict") {
         localStorage.removeItem("cart_id");
         onOrderComplete(); // reset parent cart state
-        setError(""); 
-        // Check if there actually IS an order — the cart may have completed on a previous attempt
-        // In that case treat it as success
-        setOrderId("(see Medusa admin)");
+        setError("");
         goTo("done");
         return;
       }
 
-      // Medusa v2: { type: "order", order: { id, display_id, ... } }
-      const orderObj =
-        raw?.type === "order" && raw?.order   ? raw.order   :
-        raw?.type === "order" && raw?.data    ? raw.data    :
-        raw?.order                            ? raw.order   :
-        raw?.data?.type === "order"           ? (raw.data.order || raw.data.data) :
-        null;
-
-      if (orderObj) {
-        setOrderId(String(orderObj.display_id ?? orderObj.id ?? "—"));
+      if (orderRef) {
         localStorage.removeItem("cart_id");
         onOrderComplete();
         goTo("done");
@@ -436,7 +526,6 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
     }
   }
 
-  const inputCls = "w-full border-2 border-black rounded-xl px-4 py-3 text-base text-black text-center font-bold focus:outline-none focus:border-blue-500 focus:bg-blue-50 transition-colors bg-white";
   const btnCls   = "bg-black text-white font-black text-lg px-10 py-4 rounded-full hover:bg-gray-800 active:scale-95 transition-all";
   const showBack = step !== "country" && step !== "address" && step !== "addressReview" && step !== "done";
 
@@ -494,39 +583,73 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
         {/* Summary bar */}
         {step !== "country" && step !== "address" && step !== "addressReview" && step !== "done" && (
-          <div className="bg-black px-8 py-3 grid grid-cols-3 gap-4 text-sm">
+          <div className="bg-black px-8 py-3 grid grid-cols-3 gap-4 text-sm items-start">
             <button
               type="button"
               onMouseEnter={() => setRecipientHover(true)}
               onMouseLeave={() => setRecipientHover(false)}
-              onClick={() => goTo("country", "back")}
-              className="relative text-left appearance-none border-0 bg-transparent p-2 rounded-md hover:bg-white/10 transition-colors"
+              onClick={() => jumpToStep("country")}
+              className="relative text-center appearance-none border-0 bg-transparent p-3 rounded-md hover:bg-white/10 transition-colors min-h-23 align-top"
               aria-label="Edit recipient details"
             >
               <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Recipient</p>
               <p className="font-semibold text-white leading-tight mb-1">{addr.full_name || "—"}</p>
-              <div className="text-white/75 text-xs leading-tight">
+              <div className="text-white/75 text-xs leading-tight text-center">
                 {recipientAddressLines.length > 0 ? recipientAddressLines.map((line, idx) => (
                   <p key={idx}>{line}</p>
                 )) : <p>—</p>}
               </div>
               <span
                 ref={recipientPencilRef}
-                className="absolute right-0 bottom-0 text-sm"
-                style={{ opacity: 0, transform: "translateY(14px)" }}
+                className="absolute right-2 top-2 text-sm"
+                style={{ opacity: 0, transform: "translate(8px, 14px)" }}
                 aria-hidden="true"
               >
                 ✎
               </span>
             </button>
-            <div className="p-2 rounded-md hover:bg-white/10 transition-colors">
-              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Contact</p>
+            <button
+              type="button"
+              onMouseEnter={() => setContactHover(true)}
+              onMouseLeave={() => setContactHover(false)}
+              onClick={() => jumpToStep("contact")}
+              className="relative p-3 rounded-md hover:bg-white/10 transition-colors text-center min-h-23 appearance-none border-0 bg-transparent"
+              aria-label="Edit contact info"
+            >
+              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Contact Info</p>
               <p className="font-semibold text-white text-xs break-all">{contact.email || "—"}</p>
-            </div>
-            <div className="text-right p-2 rounded-md hover:bg-white/10 transition-colors">
-              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Total</p>
-              <p className="font-semibold text-white text-lg">${(subtotal/100).toFixed(2)}</p>
-            </div>
+              <p className="text-white/80 text-xs mt-0.5">{contact.phone || "—"}</p>
+              <p className="text-white/80 text-xs italic mt-0.5">{contactOptIn ? "Send updates." : "Don’t send updates."}</p>
+              <span
+                ref={contactPencilRef}
+                className="absolute right-2 top-2 text-sm"
+                style={{ opacity: 0, transform: "translate(8px, 14px)" }}
+                aria-hidden="true"
+              >
+                ✎
+              </span>
+            </button>
+            <button
+              type="button"
+              onMouseEnter={() => setShippingHover(true)}
+              onMouseLeave={() => setShippingHover(false)}
+              onClick={() => jumpToStep("shipping")}
+              className="relative text-center p-3 rounded-md hover:bg-white/10 transition-colors min-h-23 appearance-none border-0 bg-transparent"
+              aria-label="Edit shipping method"
+            >
+              <p className="text-white/50 uppercase text-xs font-semibold tracking-widest mb-0.5">Shipping</p>
+              <p className="font-semibold text-white text-xs">{showShippingSummary ? shippingName : "—"}</p>
+              <p className="text-white/80 text-xs">{showShippingSummary ? shippingPrice : "—"}</p>
+              <p className="font-semibold text-white text-lg mt-1">${(subtotal/100).toFixed(2)}</p>
+              <span
+                ref={shippingPencilRef}
+                className="absolute right-2 top-2 text-sm"
+                style={{ opacity: 0, transform: "translate(8px, 14px)" }}
+                aria-hidden="true"
+              >
+                ✎
+              </span>
+            </button>
           </div>
         )}
 
@@ -546,7 +669,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             </div>
           )}
 
-          <div ref={stepRef} className={`w-full mx-auto ${(step === "address" || step === "addressReview") ? "max-w-5xl" : "max-w-lg"}`}>
+          <div ref={stepRef} className={`w-full mx-auto ${(step === "address" || step === "addressReview") ? "max-w-5xl" : (step === "contact" ? "max-w-6xl" : (step === "payment" ? "max-w-7xl" : "max-w-lg"))}`}>
 
             {/* ── STEP 1: Country ── */}
             {step === "country" && (
@@ -570,7 +693,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             {/* ── STEP 2: Address ── */}
             {step === "address" && (
               <div className="text-center w-full max-w-5xl mx-auto">
-                <h2 ref={addressHeadingRef} className="text-[38px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
+                <h2 ref={addressHeadingRef} className="text-[30px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
                   Where should we send this stuff?
                 </h2>
                 <div className="grid grid-cols-1 gap-4 mb-6 max-w-3xl mx-auto">
@@ -627,7 +750,7 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             {/* ── STEP 3: Address Review ── */}
             {step === "addressReview" && (
               <div className="text-center w-full max-w-5xl mx-auto">
-                <h2 ref={addressReviewHeadingRef} className="text-[42px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
+                <h2 ref={addressReviewHeadingRef} className="text-[30px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
                   How does this address look? Edit if needed.
                 </h2>
 
@@ -688,23 +811,28 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
             {/* ── STEP 4: Contact ── */}
             {step === "contact" && (
-              <div className="text-center w-full max-w-5xl mx-auto">
-                <h2 className="text-[46px] font-semibold text-black mb-8 leading-tight" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
+              <div className="text-center w-full max-w-6xl mx-auto">
+                <h2 className="text-[30px] font-semibold text-black mb-8 leading-tight whitespace-nowrap" style={{ fontFamily:"Helvetica Neue, Arial, sans-serif" }}>
                   Give us some contact info for confirmations and delivery.
                 </h2>
-                <div className="grid grid-cols-2 gap-3 mb-5 max-w-3xl mx-auto">
+                <div className="grid grid-cols-2 gap-3 mb-5 max-w-5xl mx-auto">
                   <input placeholder="Email Address" type="email" value={contact.email}
                     onChange={(e) => setContact((c) => ({ ...c, email:e.target.value }))}
-                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]" autoComplete="email" />
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-4 text-[18px] font-medium text-black text-center focus:outline-none bg-[#ededed]" autoComplete="email" />
                   <input placeholder="Phone (for delivery issues)" type="tel" value={contact.phone}
                     onChange={(e) => setContact((c) => ({ ...c, phone:e.target.value }))}
-                    className="w-full border-2 border-black rounded-[10px] px-6 py-3 text-[16px] font-medium text-black text-center focus:outline-none bg-[#ededed]" />
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-4 text-[18px] font-medium text-black text-center focus:outline-none bg-[#ededed]" />
                 </div>
-                <label className="flex items-center justify-center gap-3 text-[15px] font-semibold text-black mb-6 cursor-pointer">
-                  <input type="checkbox" className="w-6 h-6 rounded border-2 border-black" />
+                <label className="flex items-center justify-center gap-3 text-[20px] font-normal text-black mb-6 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={contactOptIn}
+                    onChange={(e) => setContactOptIn(e.target.checked)}
+                    className="w-7 h-7 rounded border-2 border-black"
+                  />
                   Email me when Cards Against Humanity makes a new thing.
                 </label>
-                <button onClick={confirmContact} className="bg-black text-white font-semibold text-[16px] px-10 py-3 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
+                <button onClick={confirmContact} className="bg-black text-white font-semibold text-[22px] px-12 py-4 rounded-full hover:bg-gray-800 active:scale-95 transition-all">
                   Confirm Contact Info
                 </button>
               </div>
@@ -712,69 +840,76 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
 
             {/* ── STEP 5: Shipping ── */}
             {step === "shipping" && (
-              <div className="text-center">
-                <h2 className="text-2xl font-black text-black mb-6" style={{ fontFamily:"Georgia,serif" }}>
+              <div className="text-center w-full max-w-5xl mx-auto">
+                <h2 className="text-[30px] font-semibold text-black mb-6" style={{ fontFamily:"Georgia,serif" }}>
                   How should we ship your stuff?
                 </h2>
-                <div className="space-y-3 mb-6 text-left">
+                <div className="space-y-3 mb-6 text-left max-w-md mx-auto">
                   {shippingOptions.length > 0 ? shippingOptions.map((opt: any) => (
                     <label key={opt.id}
-                      className={`flex items-center gap-4 border-2 rounded-xl px-5 py-4 cursor-pointer transition-colors ${
-                        selectedShipping===opt.id ? "border-black bg-gray-50" : "border-gray-200 hover:border-black"
+                      className={`flex items-center gap-4 border-2 rounded-xl px-5 py-4 cursor-pointer transition-colors shadow-sm ${
+                        selectedShipping===opt.id ? "border-black bg-gray-100" : "border-gray-300 hover:border-black"
                       }`}>
                       <input type="radio" checked={selectedShipping===opt.id}
                         onChange={() => setSelectedShipping(opt.id)} className="w-5 h-5" />
                       <div>
-                        <p className="font-black text-black">{opt.name}</p>
-                        <p className="text-gray-500 text-sm">${((opt.amount||0)/100).toFixed(2)}</p>
+                        <p className="font-semibold text-black text-[18px] leading-tight">{opt.name}</p>
+                        <p className="text-gray-600 text-base">${((opt.amount||0)/100).toFixed(2)}</p>
                       </div>
                     </label>
                   )) : (
-                    <label className="flex items-center gap-4 border-2 border-black rounded-xl px-5 py-4 bg-gray-50">
+                    <label className="flex items-center gap-4 border-2 border-black rounded-xl px-5 py-4 bg-gray-100 shadow-sm">
                       <input type="radio" defaultChecked className="w-5 h-5" />
                       <div>
-                        <p className="font-black text-black">Standard Shipping</p>
-                        <p className="text-gray-500 text-sm">Free</p>
+                        <p className="font-semibold text-black text-[18px] leading-tight">Standard Shipping</p>
+                        <p className="text-gray-600 text-base">Free</p>
                       </div>
                     </label>
                   )}
                 </div>
                 <button onClick={confirmShipping} className={btnCls}>Confirm Shipping</button>
+                <p className="mt-5 text-gray-600 text-sm max-w-3xl mx-auto">
+                  Your order ships from the UK. You are responsible for any applicable import taxes/duties/fees.
+                </p>
               </div>
             )}
 
             {/* ── STEP 6: Payment ── */}
             {step === "payment" && (
-              <div className="text-center">
-                <h2 className="text-2xl font-black text-black mb-1" style={{ fontFamily:"Georgia,serif" }}>
+              <div className="text-center w-full max-w-[92vw] mx-auto">
+                <h2 className="text-[30px] font-semibold text-black mb-1" style={{ fontFamily:"Georgia,serif" }}>
                   Here&apos;s where you pay us.
                 </h2>
-                <p className="text-gray-400 text-xs mb-4">🧪 Test mode — Medusa system provider, no real charge</p>
 
                 {/* Card number with icon */}
-                <div className="relative mb-3">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none select-none text-base">💳</span>
+                <div className="relative my-5 max-w-[64vw] mx-auto">
                   <input
                     ref={cardNumberRef}
-                    placeholder="1234 5678 9012 3456"
+                    placeholder="1234 1234 1234 1234"
                     value={card.number}
                     onChange={(e) => handleCardNumberChange(e.target.value)}
                     maxLength={19}
-                    className={`${inputCls} pl-10 text-left tracking-widest`}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-4 text-[20px] font-medium text-black text-center tracking-normal focus:outline-none bg-[#ededed]"
                     autoComplete="off"
                     inputMode="numeric"
                   />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-black text-white text-xs rounded-md px-2 py-1 pointer-events-none">
+                    <span className="font-semibold">link</span>
+                    <span className="w-4 h-2 rounded-sm bg-[#ff5f00]" />
+                    <span className="w-4 h-2 rounded-sm bg-[#eb001b]" />
+                    <span className="font-semibold">4134</span>
+                  </div>
                 </div>
 
                 {/* Expiry / CVC / ZIP */}
-                <div className="grid grid-cols-3 gap-2 mb-5">
+                <div className="grid grid-cols-3 gap-2 mb-8 max-w-[64vw] mx-auto">
                   <input
                     ref={expiryRef}
                     placeholder="MM / YY"
                     value={card.expiry}
                     onChange={(e) => handleExpiryChange(e.target.value)}
                     maxLength={7}
-                    className={`${inputCls} tracking-wider`}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-4 text-[20px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
                     autoComplete="off"
                     inputMode="numeric"
                   />
@@ -784,36 +919,47 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
                     value={card.cvc}
                     onChange={(e) => handleCvcChange(e.target.value)}
                     maxLength={4}
-                    className={inputCls}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-4 text-[20px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
                     autoComplete="off"
                     type="password"
                     inputMode="numeric"
                   />
                   <input
                     ref={zipRef}
-                    placeholder="ZIP"
+                    placeholder="Billing Postal Code"
                     value={card.postal}
                     onChange={(e) => handleZipChange(e.target.value)}
-                    className={inputCls}
+                    className="w-full border-2 border-black rounded-[10px] px-6 py-4 text-[20px] font-medium text-black text-center focus:outline-none bg-[#ededed]"
                     autoComplete="off"
                   />
                 </div>
 
-                <div className="flex justify-between font-black text-black text-lg border-t-2 border-black pt-3 mb-4">
-                  <span>Total</span>
-                  <span>${(subtotal/100).toFixed(2)}</span>
-                </div>
+                <label className="flex items-center justify-center gap-3 text-[18px] font-normal text-black mb-6 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => {
+                      setTermsAccepted(e.target.checked);
+                      if (e.target.checked) setError("");
+                    }}
+                    className="w-7 h-7 rounded border-2 border-black"
+                  />
+                  I agree to the <a href="#" className="text-blue-700 underline hover:text-blue-800">Terms of Use</a> and <a href="#" className="text-blue-700 underline hover:text-blue-800">Privacy Policy</a>.
+                </label>
 
-                <button onClick={submitOrder} disabled={submitting}
-                  className={`${btnCls} w-full disabled:opacity-50`}>
+                <button onClick={submitOrder} disabled={submitting || !termsAccepted}
+                  className="bg-black text-white font-semibold text-[24px] px-6 py-3 rounded-full hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50">
                   {submitting ? (
                     <span className="flex items-center gap-2 justify-center">
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Placing Order...
                     </span>
-                  ) : `Submit Order · $${(subtotal/100).toFixed(2)}`}
+                  ) : "Submit Order"}
                 </button>
-                <p className="text-xs text-gray-400 mt-2">Test mode — no real charge will occur</p>
+                <p className="text-gray-600 text-sm mt-3">Your card will be charged {chargeLabel}.</p>
+                <p className="mt-1 text-gray-600 text-sm max-w-3xl mx-auto">
+                  Your order ships from the UK. You are responsible for any applicable import taxes/duties/fees (which may be charged to you by the carrier upon delivery).
+                </p>
               </div>
             )}
 
@@ -821,15 +967,10 @@ export default function CheckoutDrawer({ open, onClose, cartData, onOrderComplet
             {step === "done" && (
               <div className="text-center">
                 <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-4xl font-black text-black mb-3" style={{ fontFamily:"Georgia,serif" }}>
+                <h2 className="text-[30px] font-semibold text-black mb-3" style={{ fontFamily:"Georgia,serif" }}>
                   Order placed!
                 </h2>
                 <p className="text-gray-500 text-lg mb-2">Thanks for being a horrible person.</p>
-                {orderId && (
-                  <p className="text-sm text-gray-400 font-mono bg-gray-100 inline-block px-4 py-2 rounded-lg mb-6">
-                    Confirmation #{orderId}
-                  </p>
-                )}
                 <br />
                 <button onClick={onClose} className={btnCls}>Keep Shopping</button>
               </div>
