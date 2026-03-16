@@ -540,7 +540,7 @@ function RelatedProductImageArea({
   onMouseMove: (e: MouseEvent<HTMLDivElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-  imageAreaRef: RefObject<HTMLDivElement>;
+  imageAreaRef: RefObject<HTMLDivElement | null>;
   stickerSrc: string;
   mouseOff: { x: number; y: number };
 }) {
