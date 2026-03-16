@@ -143,21 +143,21 @@ export default function FAQSection({ heading, faqs }: FAQSectionProps) {
     <section
       className="bg-black"
       style={{
-        padding: "clamp(60px,8vw,120px) clamp(24px,6vw,80px)",
+        padding: "clamp(48px,7vw,110px) clamp(18px,5vw,72px)",
       }}
     >
       {/* ── Header row ── */}
       <div
-        className="flex items-start justify-between"
-        style={{ marginBottom: "clamp(40px,5vw,72px)", gap: 24 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+        style={{ marginBottom: "clamp(32px,5vw,64px)", gap: 24 }}
       >
         <h2
           className="text-white font-black"
           style={{
             fontFamily:    "Georgia, 'Times New Roman', serif",
-            fontSize:      "clamp(3rem,7vw,6.5rem)",   // ← much larger, matches reference
+            fontSize:      "clamp(2.4rem,6vw,5.4rem)",   // responsive downscale for mobile
             letterSpacing: "-0.03em",
-            lineHeight:    1.0,
+            lineHeight:    1.05,
             margin:        0,
           }}
         >
@@ -166,15 +166,15 @@ export default function FAQSection({ heading, faqs }: FAQSectionProps) {
 
         <button
           onClick={() => { setAllOpen(o => !o); setOpenIdx(null); }}
-          className="flex-shrink-0 font-black bg-white text-black hover:bg-gray-100 transition-colors"
+          className="flex-shrink-0 font-black bg-white text-black hover:bg-gray-100 transition-colors w-full sm:w-auto"
           style={{
             borderRadius:  9999,
-            padding:       "clamp(12px,1.2vw,18px) clamp(22px,2.2vw,36px)",
-            fontSize:      "clamp(14px,1.1vw,17px)",
+            padding:       "clamp(12px,1.2vw,16px) clamp(20px,2.1vw,32px)",
+            fontSize:      "clamp(14px,1.1vw,16px)",
             fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
             border:        "none",
             cursor:        "pointer",
-            marginTop:     8,   // slight optical alignment with text cap-height
+            marginTop:     4,   // slight optical alignment with text cap-height
             whiteSpace:    "nowrap",
           }}
         >

@@ -532,6 +532,7 @@ export default function HeroSection({
   const [menuVisible, setMenuVisible] = useState(false);
   const [cartIconHovered, setCartIconHovered] = useState(false);
   const [flipped,     setFlipped]     = useState<boolean[]>(Array(6).fill(false));
+  const [mobileOpen, setMobileOpen]   = useState(false);
 
   // ─── Stable ref-callback for white cards ──────────────────────────
   // Using useCallback here gives a stable function reference so React
@@ -592,6 +593,7 @@ export default function HeroSection({
     clearSwitchTimer();
     setActiveMenu(null);
     setMenuVisible(false);
+    setMobileOpen(false);
     closeTimerRef.current = setTimeout(() => {
       setRenderedMenu(null);
       closeTimerRef.current = null;
@@ -599,6 +601,11 @@ export default function HeroSection({
   }, [clearCloseTimer, clearSwitchTimer]);
 
   const toggleMenu = useCallback((menu: "shop" | "about") => {
+    if (mobileOpen) {
+      setMobileOpen(false);
+      return;
+    }
+
     if (activeMenu === menu && menuVisible) {
       closeAll();
       return;
@@ -630,6 +637,7 @@ export default function HeroSection({
   }, [activeMenu, menuVisible, cartOpen, clearCloseTimer, clearSwitchTimer, closeAll, onCartClose, openMenu]);
 
   const toggleCart = useCallback(() => {
+    if (mobileOpen) setMobileOpen(false);
     clearCloseTimer();
     clearSwitchTimer();
 
@@ -690,6 +698,13 @@ export default function HeroSection({
       },
     });
   }, [clearAutoTimer]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onResize = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [mobileOpen]);
 
   // ─── Fan white cards out ───────────────────────────────────────────
   const fanOut = useCallback(async (gsap: any) => {
@@ -929,10 +944,10 @@ export default function HeroSection({
 
       <section
         className="relative w-full bg-black overflow-hidden"
-        style={{ height: "100svh", minHeight: 620 }}
+        style={{ height: "100svh", minHeight: 540 }}
       >
         {/* Wordmark */}
-        <div ref={titleRef} className="absolute top-12 left-12 z-30" style={{ opacity: 0 }}>
+        <div ref={titleRef} className="absolute top-12 left-12 z-10" style={{ opacity: 0 }}>
           <WordmarkSVG />
         </div>
 
@@ -940,14 +955,16 @@ export default function HeroSection({
         <div
           ref={navRef}
           className="absolute top-0 right-0 z-102 flex items-center gap-10"
-          style={{ opacity: 0, height: 72, paddingRight: 40 }}
+          style={{ opacity: 0, height: 72, paddingRight: 20 }}
         >
-          <button className={btnCls} style={btnStyle} onClick={() => toggleMenu("shop")}>
-            Shop {chevron(activeMenu === "shop" && menuVisible)}
-          </button>
-          <button className={btnCls} style={btnStyle} onClick={() => toggleMenu("about")}>
-            About {chevron(activeMenu === "about" && menuVisible)}
-          </button>
+          <div className="hidden md:flex items-center gap-10">
+            <button className={btnCls} style={btnStyle} onClick={() => toggleMenu("shop")}>
+              Shop {chevron(activeMenu === "shop" && menuVisible)}
+            </button>
+            <button className={btnCls} style={btnStyle} onClick={() => toggleMenu("about")}>
+              About {chevron(activeMenu === "about" && menuVisible)}
+            </button>
+          </div>
           <button
             onClick={toggleCart}
             onMouseEnter={() => setCartIconHovered(true)}
@@ -976,13 +993,25 @@ export default function HeroSection({
               {cartIconLabel}
             </span>
           </button>
+
+          <button
+            className="md:hidden w-10 h-10 flex items-center justify-center rounded-full border border-white/40"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          >
+            <div className="space-y-1.5">
+              <span className={`block h-0.5 w-6 bg-white transition-transform ${mobileOpen ? "translate-y-2 rotate-45" : ""}`} />
+              <span className={`block h-0.5 w-6 bg-white transition-opacity ${mobileOpen ? "opacity-0" : "opacity-100"}`} />
+              <span className={`block h-0.5 w-6 bg-white transition-transform ${mobileOpen ? "-translate-y-2 -rotate-45" : ""}`} />
+            </div>
+          </button>
         </div>
 
         {/* Cards stage — hidden until GSAP positions everything */}
         <div
           ref={stageRef}
           className="absolute inset-0 flex items-center justify-center"
-          style={{ zIndex: 10, visibility: "hidden" }}
+          style={{ zIndex: 40, visibility: "hidden" }}
         >
           {/* Black card */}
           <div
@@ -1033,6 +1062,23 @@ export default function HeroSection({
             source={quotes[quoteIdx % quotes.length]?.source ?? ""}
           />
         </div>
+
+        {mobileOpen && (
+          <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}>
+            <div className="absolute top-16 left-0 right-0 px-6 pb-10" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-col gap-4 text-white font-black text-2xl">
+                <a href="/products/more-cah" onClick={() => setMobileOpen(false)} className="hover:opacity-70">Shop</a>
+                <a href="/#about" onClick={() => setMobileOpen(false)} className="hover:opacity-70">About</a>
+                <button
+                  className="text-left hover:opacity-70"
+                  onClick={() => { setMobileOpen(false); toggleCart(); }}
+                >
+                  Cart ({cartCount})
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </>
   );

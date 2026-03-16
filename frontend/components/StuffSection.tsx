@@ -226,23 +226,18 @@ export default function StuffSection({
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 
   return (
-    <section style={{
-      background: "#000",
-      padding: "clamp(60px,7vw,100px) clamp(24px,5vw,64px)",
-    }}>
+    <section
+      className="bg-black"
+      style={{ padding: "clamp(48px,6vw,88px) clamp(18px,4vw,56px)" }}
+    >
       {/* Header row */}
-      <div style={{
-        display:        "flex",
-        alignItems:     "flex-start",
-        justifyContent: "space-between",
-        marginBottom:   "clamp(28px,3.5vw,48px)",
-      }}>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between" style={{ marginBottom: "clamp(24px,3vw,44px)" }}>
         <h2 style={{
           fontFamily:    "Georgia, 'Times New Roman', serif",
           fontWeight:    900,
-          fontSize:      "clamp(2.2rem,4.5vw,4rem)",
+          fontSize:      "clamp(2rem,4vw,3.6rem)",
           letterSpacing: "-0.03em",
-          lineHeight:    1,
+          lineHeight:    1.05,
           color:         "#fff",
           margin:        0,
         }}>
@@ -250,22 +245,24 @@ export default function StuffSection({
         </h2>
 
         {/* "More to come!" starburst */}
-        <Image
-          src="https://img.cah.io/images/vc07edlh/production/6d7d67943605f882af1c5c779e5e77f7c23bb6a4-86x86.svg"
-          alt="More to come!"
-          width={86}
-          height={86}
-          loading="lazy"
-          style={{ display: "block", flexShrink: 0, marginLeft: 24 }}
-        />
+        <div className="flex sm:justify-end">
+          <Image
+            src="https://img.cah.io/images/vc07edlh/production/6d7d67943605f882af1c5c779e5e77f7c23bb6a4-86x86.svg"
+            alt="More to come!"
+            width={86}
+            height={86}
+            loading="lazy"
+            className="w-16 h-16 sm:w-[72px] sm:h-[72px] md:w-[86px] md:h-[86px]"
+            style={{ display: "block", flexShrink: 0 }}
+          />
+        </div>
       </div>
 
-      {/* 3-column grid */}
-      <div style={{
-        display:             "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap:                 "clamp(10px,1.5vw,20px)",
-      }}>
+      {/* Responsive grid */}
+      <div
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        style={{ gap: "clamp(10px,1.5vw,20px)" }}
+      >
         {posts.map((post, i) => (
           <StuffCard key={post.id ?? i} post={post} />
         ))}

@@ -52,7 +52,7 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         className="fixed left-0 bottom-0 bg-transparent"
         style={{
           top: NAVBAR_HEIGHT,
-          right: DRAWER_WIDTH_PX,
+          right: 0,
           zIndex: 120,
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? "auto" : "none",
@@ -64,7 +64,7 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
         className="fixed right-0 bg-white flex flex-col"
         style={{
           top: NAVBAR_HEIGHT,
-          width: DRAWER_WIDTH_PX,
+          width: "min(92vw, 380px)",
           height: `calc(100svh - ${NAVBAR_HEIGHT}px)`,
           zIndex: 121,
           transform: isOpen ? "translateX(0)" : "translateX(100%)",

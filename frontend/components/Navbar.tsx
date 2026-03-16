@@ -26,6 +26,7 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
   const [renderedMenu, setRenderedMenu] = useState<"shop" | "about" | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [cartIconHovered, setCartIconHovered] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { cartCount, cartOpen, setCartOpen, cartData } = useCartCtx();
@@ -52,6 +53,15 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onResize = () => {
+      if (window.innerWidth >= 768) setMobileOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [mobileOpen]);
 
   const clearCloseTimer = () => {
     if (closeTimerRef.current) {
@@ -82,6 +92,7 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
     clearSwitchTimer();
     setActiveMenu(null);
     setMenuVisible(false);
+    setMobileOpen(false);
     closeTimerRef.current = setTimeout(() => {
       setRenderedMenu(null);
       closeTimerRef.current = null;
@@ -89,6 +100,11 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
   };
 
   const toggleMenu = (menu: "shop" | "about") => {
+    if (mobileOpen) {
+      setMobileOpen(false);
+      return;
+    }
+
     if (activeMenu === menu && menuVisible) {
       closeAll();
       return;
@@ -120,6 +136,9 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
   };
 
   const toggleCart = () => {
+    if (mobileOpen) {
+      setMobileOpen(false);
+    }
     clearCloseTimer();
     clearSwitchTimer();
 
@@ -172,7 +191,7 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
         className="fixed top-0 left-0 right-0 z-101 bg-black text-white"
         style={{
           height: "72px",
-          padding: "0 40px",
+          padding: "0 20px",
           opacity: vis ? 1 : 0,
           transform: vis ? "translateY(0)" : "translateY(-6px)",
           pointerEvents: vis ? "auto" : "none",
@@ -186,7 +205,7 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
             href="/"
             className="font-extrabold hover:opacity-70 transition-opacity"
             style={{
-              fontSize: "28px",
+              fontSize: "clamp(22px,4vw,28px)",
               letterSpacing: "-0.02em",
               textDecoration: "none",
             }}
@@ -195,27 +214,24 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
           </Link>
 
           {/* Menu */}
-          <div className="flex items-center gap-10">
+          <div className="flex items-center gap-6 md:gap-10">
+            <div className="hidden md:flex items-center gap-10">
+              <button
+                className="flex items-center gap-1 hover:opacity-70 transition-opacity"
+                style={{ fontSize: "28px", fontWeight: 800 }}
+                onClick={() => toggleMenu("shop")}
+              >
+                Shop {chevron(activeMenu === "shop" && menuVisible)}
+              </button>
+              <button
+                className="flex items-center gap-1 hover:opacity-70 transition-opacity"
+                style={{ fontSize: "28px", fontWeight: 800 }}
+                onClick={() => toggleMenu("about")}
+              >
+                About {chevron(activeMenu === "about" && menuVisible)}
+              </button>
+            </div>
 
-            {/* Shop */}
-            <button
-              className="flex items-center gap-1 hover:opacity-70 transition-opacity"
-              style={{ fontSize: "28px", fontWeight: 800 }}
-              onClick={() => toggleMenu("shop")}
-            >
-              Shop {chevron(activeMenu === "shop" && menuVisible)}
-            </button>
-
-            {/* About */}
-            <button
-              className="flex items-center gap-1 hover:opacity-70 transition-opacity"
-              style={{ fontSize: "28px", fontWeight: 800 }}
-              onClick={() => toggleMenu("about")}
-            >
-              About {chevron(activeMenu === "about" && menuVisible)}
-            </button>
-
-            {/* Cart */}
             <button
               onClick={toggleCart}
               onMouseEnter={() => setCartIconHovered(true)}
@@ -246,9 +262,39 @@ export default function Navbar({ cmsHome, alwaysVisible = false }: { cmsHome: un
               </span>
             </button>
 
+            <button
+              className="md:hidden w-10 h-10 flex items-center justify-center rounded-full border border-white/40"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            >
+              <span className="sr-only">Toggle menu</span>
+              <div className="space-y-1.5">
+                <span className={`block h-0.5 w-6 bg-white transition-transform ${mobileOpen ? "translate-y-2 rotate-45" : ""}`} />
+                <span className={`block h-0.5 w-6 bg-white transition-opacity ${mobileOpen ? "opacity-0" : "opacity-100"}`} />
+                <span className={`block h-0.5 w-6 bg-white transition-transform ${mobileOpen ? "-translate-y-2 -rotate-45" : ""}`} />
+              </div>
+            </button>
           </div>
         </div>
       </nav>
+
+      {/* Mobile menu overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}>
+          <div className="absolute top-16 left-0 right-0 px-6 pb-10" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col gap-4 text-white font-black text-2xl">
+              <Link href="/products/more-cah" onClick={() => setMobileOpen(false)} className="hover:opacity-70">Shop</Link>
+              <Link href="/#about" onClick={() => setMobileOpen(false)} className="hover:opacity-70">About</Link>
+              <button
+                className="text-left hover:opacity-70"
+                onClick={() => { setMobileOpen(false); toggleCart(); }}
+              >
+                Cart ({cartCount})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

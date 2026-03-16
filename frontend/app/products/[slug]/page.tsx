@@ -1,9 +1,9 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef, useCallback, type CSSProperties, type MouseEvent, type RefObject } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   getOrCreateCart,
   fetchCartById,
@@ -116,6 +116,94 @@ const INJECT_CSS = `
   }
   @media (prefers-reduced-motion: reduce) {
     .cah-badge-spin { animation: none !important; }
+  }
+  .product-hero-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 64px 40px;
+    display: grid;
+    grid-template-columns: minmax(0,1.05fr) minmax(0,0.95fr);
+    gap: 80px;
+    align-items: start;
+  }
+  .product-hero-left {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .product-hero-main {
+    min-height: clamp(320px,38vw,520px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .product-hero-info {
+    padding-top: 8px;
+    max-width: 620px;
+  }
+  .product-gallery-viewer {
+    position: absolute;
+    bottom: -72px;
+    left: -120px;
+    z-index: 50;
+  }
+  .related-products {
+    padding: clamp(56px,8vw,88px) clamp(18px,6vw,48px);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .related-grid {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(18px,2vw,28px);
+    overflow: visible;
+    justify-content: center;
+    align-items: stretch;
+  }
+  .product-footer {
+    padding: clamp(52px,7vw,72px) clamp(18px,6vw,48px) 32px;
+  }
+  .product-footer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 24px 32px;
+  }
+  @media (max-width: 1180px) {
+    .product-hero-grid {
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+      gap: 56px;
+      padding: 56px 28px;
+    }
+    .product-gallery-viewer { left: -40px; }
+  }
+  @media (max-width: 960px) {
+    .product-hero-grid {
+      grid-template-columns: 1fr;
+      gap: 36px;
+      padding: 52px 24px;
+    }
+    .product-hero-left { order: 1; }
+    .product-hero-info { order: 2; padding-top: 0; }
+    .product-hero-main { min-height: clamp(280px,52vw,420px); }
+    .product-gallery-viewer {
+      position: static;
+      margin-top: 10px;
+    }
+  }
+  @media (max-width: 640px) {
+    .product-hero-grid { padding: 44px 18px; gap: 28px; }
+    .product-hero-main { min-height: 260px; }
+    .product-gallery-viewer { margin-top: 6px; }
+  }
+  @media (min-width: 1120px) {
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      align-items: start;
+      justify-items: center;
+    }
   }
 `;
 
@@ -387,7 +475,7 @@ function ImageViewer({ images }: { images: string[] }) {
   if (!images.length) return null;
 
   return (
-    <div style={{ position: "absolute", bottom: -72, left: -120, zIndex: 50 }}>
+    <div className="product-gallery-viewer">
       {!expanded && (
         <CollapsedViewer
           animKey={animKey}
@@ -650,7 +738,7 @@ function RelatedProductCard({
         border: "2px solid #fff",
         borderRadius: 18, overflow: "visible",
         textDecoration: "none", minHeight: 640,
-        cursor: "pointer", position: "relative", width: "100%", maxWidth: 415, zIndex: 10,
+        cursor: "pointer", position: "relative", width: "100%", maxWidth: "100%", zIndex: 10,
       }}>
         <div style={{ position: "absolute", top: -14, right: -14, zIndex: 20 }}>
           <StarburstBadge text="New!" size={72} />
@@ -718,14 +806,12 @@ function RelatedProducts({
   if (!products.length) return null;
 
   return (
-    <section style={{ background: "#000", padding: "80px 48px",
-      borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+    <section className="related-products" style={{ background: "#000" }}>
       <h2 style={{ color: "#fff", fontWeight: 900,
         fontSize: "clamp(1.8rem,3.5vw,2.6rem)", letterSpacing: "-0.02em", marginBottom: 40 }}>
         You should check out:
       </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 415px))", gap: 25,
-        overflow: "visible", justifyContent: "center", justifyItems: "center" }}>
+      <div className="related-grid">
         {products.map((p: any, i: number) => (
           <RelatedProductCard
             key={p.id ?? i}
@@ -748,8 +834,8 @@ function Footer() {
     { heading: "Find Us", links: ["Facebook","Instagram","TikTok","Bluesky","Amazon","Target"] },
   ];
   return (
-    <footer className="bg-white" style={{ padding: "64px 48px 32px" }}>
-      <div className="grid mb-12" style={{ gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1.5fr", gap: "0 48px" }}>
+    <footer className="bg-white product-footer">
+      <div className="product-footer-grid mb-12">
         <p className="text-black font-black leading-tight" style={{ fontFamily: "Georgia,serif", fontSize: "2rem", letterSpacing: "-0.02em" }}>
           Cards<br />Against<br />Humanity
         </p>
@@ -764,10 +850,10 @@ function Footer() {
         <div>
           <p className="font-black text-black mb-2 text-base">Email List</p>
           <p className="text-sm text-black mb-4">Sign up and we&apos;ll let you know first when we do anything:</p>
-          <div className="flex items-center border-2 border-black rounded-lg overflow-hidden">
+          <div className="flex items-center border-2 border-black rounded-lg overflow-hidden bg-white">
             <input type="email" placeholder="Email Address"
               className="flex-1 px-3 py-3 text-sm outline-none text-black bg-white" />
-            <button className="mr-1.5 w-8 h-8 rounded-full border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors">
+            <button className="mr-1.5 w-8 h-8 rounded-full border-2 border-black flex items-center justify-center bg-white text-black transition-colors hover:bg-black hover:text-white">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
               </svg>
@@ -876,13 +962,10 @@ function ProductPageContent() {
       {/* Hero */}
       <div className="relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <PlusIcons />
-        <div className="relative z-10" style={{
-          maxWidth: 1200, margin: "0 auto", padding: "64px 40px",
-          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "start",
-        }}>
+        <div className="relative z-10 product-hero-grid">
           {/* Left: image + viewer */}
-          <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 420 }}>
+          <div className="product-hero-left">
+            <div className="product-hero-main">
               {mainImage ? (
                 <Image
                   src={mainImage}
@@ -908,7 +991,7 @@ function ProductPageContent() {
           </div>
 
           {/* Right: info */}
-          <div style={{ paddingTop: 8 }}>
+          <div className="product-hero-info">
             <h1 style={{ color: "#fff", fontWeight: 900,
               fontSize: "clamp(2.2rem,4vw,3rem)", letterSpacing: "-0.02em",
               marginBottom: 28, lineHeight: 1.1 }}>

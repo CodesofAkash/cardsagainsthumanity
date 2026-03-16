@@ -233,12 +233,15 @@ export default function BuySection({
     mode: "snap",
     slides: {
       origin:  "center",
-      perView: 1.58,
-      spacing: 26,
+      perView: 1.08,
+      spacing: 14,
     },
     breakpoints: {
-      "(min-width: 600px)": {
-        slides: { origin: "center", perView: 1.64, spacing: 32 },
+      "(min-width: 480px)": {
+        slides: { origin: "center", perView: 1.32, spacing: 20 },
+      },
+      "(min-width: 768px)": {
+        slides: { origin: "center", perView: 1.6, spacing: 28 },
       },
       "(min-width: 1000px)": {
         slides: { origin: "center", perView: 1.68, spacing: 32 },
@@ -272,15 +275,15 @@ export default function BuySection({
   const resumeAuto = () => scheduleAuto();
 
   return (
-    <section style={{ background: "#000", padding: "clamp(48px,6vw,80px) 0" }}>
+    <section style={{ background: "#000", padding: "clamp(40px,6vw,72px) 0" }}>
       {/* Heading */}
-      <div style={{ paddingLeft: "clamp(32px,6vw,80px)", marginBottom: "clamp(24px,3vw,40px)" }}>
+      <div className="px-5 sm:px-12 md:px-16" style={{ marginBottom: "clamp(20px,3vw,36px)" }}>
         <h2 style={{
           fontFamily:    "Helvetica Neue, Arial Black, sans-serif",
           fontWeight:    900,
-          fontSize:      "clamp(2.2rem,4.5vw,4rem)",
+          fontSize:      "clamp(2rem,4.2vw,3.6rem)",
           letterSpacing: "-0.035em",
-          lineHeight:    1,
+          lineHeight:    1.05,
           color:         "#fff",
           margin:        0,
         }}>
@@ -292,13 +295,14 @@ export default function BuySection({
       <div
         ref={sliderRef}
         className="keen-slider"
+        style={{ paddingLeft: "clamp(12px,3vw,24px)", paddingRight: "clamp(12px,3vw,24px)" }}
       >
         {cards.map((card, i) => (
           <div
             key={card.id ?? i}
             className="keen-slider__slide"
             style={{
-              aspectRatio:  "16 / 11.5",
+              aspectRatio:  "4 / 3.2",
               borderRadius: 16,
               overflow:     "hidden",
             }}

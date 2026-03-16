@@ -124,7 +124,11 @@ function AboutSection({ cmsHome }: { cmsHome: CMSHome | null }) {
   const p1 = cmsHome?.about?.paragraph1 || "is a fill-in-the-blank party game that turns your awkward personality and lackluster social skills into hours of fun! Wow.";
   const p2 = cmsHome?.about?.paragraph2 || "The game is simple. Each round, one player asks a question from a black card, and everyone else answers with their funniest white card.";
   return (
-    <section className="bg-white relative h-[85vh] overflow-hidden" style={{ padding: "112px 48px" }}>
+    <section
+      id="about"
+      className="bg-white relative overflow-hidden min-h-[60vh] sm:min-h-[72vh] lg:min-h-[85vh]"
+      style={{ padding: "clamp(48px,8vw,112px) clamp(20px,6vw,48px)" }}
+    >
       {CAH_ICONS.map((icon, i) => (
         <div key={i} className="absolute pointer-events-none select-none" style={{ ...ICON_POS[i], opacity: 1 }}>
           <Image
@@ -157,29 +161,32 @@ function FooterSection({ cmsHome }: { cmsHome: CMSHome | null }) {
   const legalLinks = cmsHome?.footer?.legalLinks || [{ label: "Terms of Use", href: "#" },{ label: "Privacy Policy", href: "#" },{ label: "Submission Terms", href: "#" },{ label: "Cookie Preferences", href: "#" }];
   const cols = [{ heading: "Shop", links: shopLinks },{ heading: "Info", links: infoLinks },{ heading: "Find Us", links: findUs }];
   return (
-    <footer className="bg-white" style={{ padding: "80px 48px 40px" }}>
-      <div className="grid mb-12" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr", gap: "0 48px" }}>
-        <p className="text-black font-black leading-tight" style={{ fontFamily: "Georgia, serif", fontSize: "2rem", letterSpacing: "-0.02em" }}>
+    <footer className="bg-white" style={{ padding: "clamp(56px,7vw,88px) clamp(18px,5vw,48px) 40px" }}>
+      <div
+        className="grid mb-12 gap-10 sm:gap-8"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}
+      >
+        <p className="text-black font-black leading-tight" style={{ fontFamily: "Georgia, serif", fontSize: "clamp(1.6rem,3vw,2rem)", letterSpacing: "-0.02em" }}>
           Cards<br />Against<br />Humanity
         </p>
         {cols.map(col => (
-          <div key={col.heading}>
-            <p className="font-black text-black mb-5" style={{ fontSize: "1rem" }}>{col.heading}</p>
+          <div key={col.heading} className="space-y-3">
+            <p className="font-black text-black" style={{ fontSize: "1rem" }}>{col.heading}</p>
             {col.links.map((l: FooterLink) => (
-              <a key={l.label} href={l.href || "#"} className="block text-black hover:opacity-60"
-                style={{ fontSize: "1rem", textDecoration: "underline", marginBottom: 10 }}>{l.label}</a>
+              <a key={l.label} href={l.href || "#"} className="block text-black hover:opacity-70"
+                style={{ fontSize: "0.98rem", textDecoration: "underline", marginBottom: 6 }}>{l.label}</a>
             ))}
           </div>
         ))}
-        <div>
-          <p className="font-black text-black mb-2" style={{ fontSize: "1rem" }}>Email List</p>
-          <p className="text-black mb-5" style={{ fontSize: "1rem", lineHeight: 1.5 }}>Sign up and we&apos;ll let you know first when we do anything:</p>
-          <form className="flex items-center border-2 border-black rounded-lg overflow-hidden">
+        <div className="space-y-3">
+          <p className="font-black text-black" style={{ fontSize: "1rem" }}>Email List</p>
+          <p className="text-black" style={{ fontSize: "0.98rem", lineHeight: 1.5 }}>Sign up and we&apos;ll let you know first when we do anything:</p>
+          <form className="flex flex-col gap-3 sm:flex-row items-stretch border-2 border-black rounded-lg overflow-hidden">
             <input type="email" name="email" placeholder="Email Address"
               className="flex-1 outline-none bg-white text-black placeholder-gray-400"
               style={{ padding: "12px 14px", fontSize: "0.95rem" }} />
-            <button type="submit" className="flex items-center justify-center rounded-full border-2 text-black border-black hover:bg-black hover:text-white transition-colors shrink-0"
-              style={{ width: 36, height: 36, margin: "0 6px" }}>
+            <button type="submit" className="flex items-center justify-center rounded-none sm:rounded-full border-0 sm:border-2 text-black border-black hover:bg-black hover:text-white transition-colors shrink-0"
+              style={{ width: 48, height: 48, margin: "0 6px" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
               </svg>
@@ -187,16 +194,16 @@ function FooterSection({ cmsHome }: { cmsHome: CMSHome | null }) {
           </form>
         </div>
       </div>
-      <div className="flex items-center justify-between flex-wrap" style={{ borderTop: "1px solid rgba(0,0,0,0.1)", paddingTop: 24, gap: 16 }}>
-        <span className="flex items-center gap-1 border border-black rounded-full font-black text-black" style={{ padding: "7px 16px", fontSize: "0.95rem" }}>
+      <div className="flex items-center justify-between flex-wrap" style={{ borderTop: "1px solid rgba(0,0,0,0.1)", paddingTop: 24, gap: 12 }}>
+        <span className="flex items-center gap-1 border border-black rounded-full font-black text-black" style={{ padding: "6px 14px", fontSize: "0.9rem" }}>
           India <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z" /></svg>
         </span>
-        <div className="flex gap-6 flex-wrap">
+        <div className="flex gap-4 flex-wrap">
           {legalLinks.map((l: FooterLink) => (
-            <a key={l.label} href={l.href || "#"} className="text-black hover:underline" style={{ fontSize: "0.95rem" }}>{l.label}</a>
+            <a key={l.label} href={l.href || "#"} className="text-black hover:underline" style={{ fontSize: "0.92rem" }}>{l.label}</a>
           ))}
         </div>
-        <p className="text-black" style={{ fontSize: "0.95rem" }}>{copyright}</p>
+        <p className="text-black" style={{ fontSize: "0.92rem" }}>{copyright}</p>
       </div>
     </footer>
   );
