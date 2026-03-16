@@ -8,9 +8,9 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   }
   
   try {
-    await seedDemoData({ container: req.scope })
+    await seedDemoData({ container: req.scope, args: [] })
     res.json({ success: true, message: "Seeded successfully" })
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message })
   }
 }
