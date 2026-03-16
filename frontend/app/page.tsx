@@ -1,3 +1,4 @@
+import Image from "next/image";
 import ClientShell from "@/components/ClientShell";
 import StuffSection from "../components/StuffSection";
 import StealSectionClient from "@/components/StealSection";
@@ -126,8 +127,15 @@ function AboutSection({ cmsHome }: { cmsHome: CMSHome | null }) {
     <section className="bg-white relative h-[85vh] overflow-hidden" style={{ padding: "112px 48px" }}>
       {CAH_ICONS.map((icon, i) => (
         <div key={i} className="absolute pointer-events-none select-none" style={{ ...ICON_POS[i], opacity: 1 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={icon.src} alt="" width={icon.w * 1.4} height={icon.h * 1.4} loading="lazy" style={{ display: "block" }} />
+          <Image
+            src={icon.src}
+            alt=""
+            width={icon.w * 1.4}
+            height={icon.h * 1.4}
+            loading="lazy"
+            sizes="64px"
+            style={{ display: "block" }}
+          />
         </div>
       ))}
       <div className="relative z-10 mx-auto mt-16 text-center" style={{ maxWidth: 820 }}>

@@ -193,6 +193,7 @@ function CardFooterMark({ tone }: { tone: "dark" | "light" }) {
           alt="Cards Against Humanity"
           width={1100}
           height={217}
+          priority
           className="block w-full"
           style={{ maxWidth: 130, height: "auto" }}
           draggable={false}

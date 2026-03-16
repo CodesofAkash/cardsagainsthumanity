@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { medusaHeaders, fetchCartById, MEDUSA_URL } from "@/hooks/useCart";
 
 interface CartDrawerProps {
@@ -94,10 +95,13 @@ export default function CartDrawer({ open, onClose, cartData, onCartUpdate, onCh
                 <div key={item.id} className="flex gap-5 py-6 items-center border-b-[3px] border-gray-400">
                   <div className="relative w-20 h-20 bg-white shrink-0 overflow-visible">
                     {imageSrc && (
-                      <img
+                      <Image
                         src={imageSrc}
                         alt={item.title}
-                        className="relative z-20 w-full h-full object-contain transition-transform duration-300 ease-out hover:scale-110 hover:-rotate-6"
+                        fill
+                        sizes="80px"
+                        loading="lazy"
+                        className="relative z-20 object-contain transition-transform duration-300 ease-out hover:scale-110 hover:-rotate-6"
                       />
                     )}
                   </div>

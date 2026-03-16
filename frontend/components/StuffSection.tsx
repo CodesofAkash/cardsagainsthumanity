@@ -250,8 +250,7 @@ export default function StuffSection({
         </h2>
 
         {/* "More to come!" starburst */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="https://img.cah.io/images/vc07edlh/production/6d7d67943605f882af1c5c779e5e77f7c23bb6a4-86x86.svg"
           alt="More to come!"
           width={86}

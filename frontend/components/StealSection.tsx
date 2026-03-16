@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 type CmsHome = {
@@ -39,14 +40,14 @@ export default function StealSection({ cmsHome }: { cmsHome: CmsHome | null }) {
           className="absolute steal-badge-wrap"
           style={{ top: 30, right: "clamp(24px,4.5vw,76px)" }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={STEAL_BADGE_SRC}
             alt="Free download now"
             width={152}
             height={152}
             className="steal-badge"
             loading="lazy"
+            sizes="152px"
             style={{ display: "block" }}
           />
         </div>
@@ -99,14 +100,14 @@ export default function StealSection({ cmsHome }: { cmsHome: CmsHome | null }) {
                 cursor: "pointer",
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={STEAL_ARROW_SRC}
                 alt="Download click here"
                 width={290}
                 height={78}
                 className="steal-arrow"
                 loading="lazy"
+                sizes="290px"
                 style={{ display: "block" }}
               />
             </button>

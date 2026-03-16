@@ -2,6 +2,7 @@
 // MegaMenus.tsx — shared dropdown menus used by both HeroSection and Navbar
 // Import and use <ShopMegaMenu> and <AboutMegaMenu> in both places
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -161,26 +162,24 @@ export function ShopMegaMenu({ onClose, visible = true }: { onClose: () => void;
                   style={{ background: col.bg, aspectRatio: "1.85/1", position: "relative" }}
                 >
                   {col.img ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        className="cah-mega-tilt"
-                        src={col.img}
-                        alt={col.label}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          objectPosition: "center",
-                          padding: "2.5%",
-                          boxSizing: "border-box",
-                          display: "block",
-                          ["--base-rot" as never]: `${baseRotation}deg`,
-                          ["--mega-scale" as never]: hovered ? "1.06" : "1",
-                          animation: `cahMegaTilt ${6.6 + idx * 1.1}s ease-in-out ${idx * 0.25}s infinite`,
-                        }}
-                      />
-                    </>
+                    <Image
+                      className="cah-mega-tilt"
+                      src={col.img}
+                      alt={col.label}
+                      fill
+                      loading="lazy"
+                      sizes="(min-width: 1024px) 25vw, 60vw"
+                      style={{
+                        objectFit: "contain",
+                        objectPosition: "center",
+                        padding: "2.5%",
+                        boxSizing: "border-box",
+                        display: "block",
+                        ["--base-rot" as never]: `${baseRotation}deg`,
+                        ["--mega-scale" as never]: hovered ? "1.06" : "1",
+                        animation: `cahMegaTilt ${6.6 + idx * 1.1}s ease-in-out ${idx * 0.25}s infinite`,
+                      }}
+                    />
                   ) : null}
                 </div>
                 <p
